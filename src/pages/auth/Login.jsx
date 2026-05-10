@@ -1,15 +1,20 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { FaPaw } from "react-icons/fa";
+import { FaPaw, FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { ImSpinner2 } from "react-icons/im";
 import { BsFillExclamationDiamondFill } from "react-icons/bs";
+import { useLang } from "../../i18n/LanguageContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/";
+  const { t } = useLang();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [dataForm, setDataForm] = useState({
     email: "",
@@ -19,9 +24,9 @@ export default function Login() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      console.log("Sudah login");
+      navigate("/", { replace: true });
     }
-  }, []);
+  }, [navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -44,19 +49,17 @@ export default function Login() {
       })
       .then((res) => {
         if (res.status !== 200) {
-          setError("Login gagal");
+          setError(t("login.loginFailed"));
           return;
         }
 
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user", JSON.stringify(res.data));
 
-        navigate("/");
+        navigate(from, { replace: true });
       })
       .catch((err) => {
-        setError(
-          err.response?.data?.message || "Terjadi kesalahan saat login"
-        );
+        setError(err.response?.data?.message || t("login.loginError"));
       })
       .finally(() => {
         setLoading(false);
@@ -65,61 +68,100 @@ export default function Login() {
 
   return (
     <form className="login-form" onSubmit={handleSubmit}>
-      <div className="login-logo">
-        <FaPaw />
+      {/* Mini brand (hanya tampil di mobile) */}
+      <div className="mobile-brand">
+        <div className="login-logo">
+          <FaPaw />
+        </div>
+        <h3>{t("app.name")}</h3>
       </div>
 
-      <h2>Login VetCare</h2>
-      <p>Masuk sebagai admin klinik dokter hewan</p>
+      <div className="form-head">
+        <h2>{t("login.welcome")}</h2>
+        <p>{t("login.subtitle")}</p>
+      </div>
 
       {error && (
-        <div className="error-box">
-          <BsFillExclamationDiamondFill /> {error}
+        <div className="alert error">
+          <BsFillExclamationDiamondFill />
+          <span>{error}</span>
         </div>
       )}
 
       {loading && (
-        <div className="loading-box">
-          <ImSpinner2 className="spin" /> Mohon tunggu...
+        <div className="alert info">
+          <ImSpinner2 className="spin" />
+          <span>{t("login.loadingMsg")}</span>
         </div>
       )}
 
-      <label>Email</label>
-      <input
-        type="text"
-        name="email"
-        placeholder="contoh: emilys"
-        onChange={handleChange}
-        required
-      />
+      <div className="field">
+        <label>{t("login.emailLabel")}</label>
+        <div className="input-wrap">
+          <FaEnvelope className="input-icon" />
+          <input
+            type="text"
+            name="email"
+            placeholder={t("login.emailPlaceholder")}
+            onChange={handleChange}
+            value={dataForm.email}
+            required
+          />
+        </div>
+      </div>
 
-      <label>Password</label>
-      <input
-        type="password"
-        name="password"
-        placeholder="contoh: emilys pass"
-        onChange={handleChange}
-        required
-      />
+      <div className="field">
+        <div className="label-row">
+          <label>{t("login.passwordLabel")}</label>
+          <Link to="/forgot" className="link-muted">
+            {t("login.forgot")}
+          </Link>
+        </div>
 
-      <button type="submit" disabled={loading}>
-        {loading ? "Loading..." : "Login"}
+        <div className="input-wrap">
+          <FaLock className="input-icon" />
+          <input
+            type={showPassword ? "text" : "password"}
+            name="password"
+            placeholder={t("login.passwordPlaceholder")}
+            onChange={handleChange}
+            value={dataForm.password}
+            required
+          />
+          <button
+            type="button"
+            className="toggle-eye"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <FaEyeSlash /> : <FaEye />}
+          </button>
+        </div>
+      </div>
+
+      <div className="field-inline">
+        <label className="checkbox">
+          <input type="checkbox" />
+          <span>{t("login.remember")}</span>
+        </label>
+      </div>
+
+      <button type="submit" className="btn-primary" disabled={loading}>
+        {loading ? t("login.submitting") : t("login.submit")}
       </button>
 
-      <p className="text-center text-sm mt-3">
-        Belum punya akun?{" "}
-        <a href="/register" className="text-green-500">
-          Register
-        </a>
+      <div className="divider">
+        <span>{t("common.or")}</span>
+      </div>
+
+      <p className="register-hint">
+        {t("login.noAccount")}{" "}
+        <Link to="/register" className="link-primary">
+          {t("login.registerHere")}
+        </Link>
       </p>
 
-      <p className="text-center text-sm">
-        <a href="/forgot" className="text-gray-500">
-          Lupa password?
-        </a>
-      </p>
-
-      <small>© 2025 VetCare Animal Clinic</small>
+      <small className="copyright">{t("login.copyright")}</small>
     </form>
   );
 }
