@@ -1,74 +1,175 @@
 import {
-  FaPaw,
   FaTachometerAlt,
-  FaDog,
   FaUserMd,
+  FaDog,
   FaCalendarAlt,
-  FaNotesMedical,
   FaMoneyBillWave,
+  FaFileMedical,
   FaSignOutAlt,
 } from "react-icons/fa";
-import { NavLink, useNavigate } from "react-router-dom";
-import fotoDika from "../assets/dika.jpg";
-import { useLang } from "../i18n/LanguageContext";
 
-export default function Sidebar() {
+import {
+  NavLink,
+  useNavigate,
+} from "react-router-dom";
+
+import "./sidebar.css";
+
+const Sidebar = () => {
+
   const navigate = useNavigate();
-  const { t } = useLang();
 
-  const menus = [
-    { name: t("sidebar.menu.dashboard"), icon: <FaTachometerAlt />, path: "/" },
-    { name: t("sidebar.menu.hewan"), icon: <FaDog />, path: "/hewan" },
-    { name: t("sidebar.menu.dokter"), icon: <FaUserMd />, path: "/dokter" },
-    { name: t("sidebar.menu.jadwal"), icon: <FaCalendarAlt />, path: "/jadwal" },
-    { name: t("sidebar.menu.rekamMedis"), icon: <FaNotesMedical />, path: "/rekam-medis" },
-    { name: t("sidebar.menu.pembayaran"), icon: <FaMoneyBillWave />, path: "/pembayaran" },
-  ];
-
+  // LOGOUT
   const handleLogout = () => {
-    const ok = window.confirm(t("sidebar.logoutConfirm"));
-    if (!ok) return;
 
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login", { replace: true });
+    const confirmLogout =
+      window.confirm(
+        "Apakah kamu yakin ingin logout?"
+      );
+
+    if(confirmLogout){
+
+      localStorage.removeItem(
+        "isLogin"
+      );
+
+      navigate("/login");
+    }
   };
 
   return (
+
     <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-icon">
-          <FaPaw />
-        </div>
-        <h2>{t("app.name")}</h2>
-      </div>
 
-      <div className="profile-box">
-        <img src={fotoDika} alt="Dr Dika" className="profile-img" />
-        <h4>Dr. Dika</h4>
-        <p>{t("sidebar.role")}</p>
-      </div>
+      {/* TOP */}
+      <div>
 
-      <nav className="menu">
-        {menus.map((menu, index) => (
+        <h1 className="logo">
+          VetCare
+        </h1>
+
+        <p className="sidebar-title">
+          MAIN MENU
+        </p>
+
+        <div className="menu">
+
+          {/* DASHBOARD */}
           <NavLink
-            key={index}
-            to={menu.path}
-            end={menu.path === "/"}
+            to="/"
             className={({ isActive }) =>
-              isActive ? "menu-item active" : "menu-item"
+              isActive
+                ? "menu-item active"
+                : "menu-item"
             }
           >
-            <span>{menu.icon}</span>
-            {menu.name}
+            <FaTachometerAlt />
+            Dashboard
           </NavLink>
-        ))}
-      </nav>
 
-      <button type="button" className="logout-box" onClick={handleLogout}>
-        <FaSignOutAlt />
-        <span>{t("sidebar.logout")}</span>
-      </button>
+          {/* DOKTER */}
+          <NavLink
+            to="/dokter"
+            className={({ isActive }) =>
+              isActive
+                ? "menu-item active"
+                : "menu-item"
+            }
+          >
+            <FaUserMd />
+            Dokter
+          </NavLink>
+
+          {/* HEWAN */}
+          <NavLink
+            to="/hewan"
+            className={({ isActive }) =>
+              isActive
+                ? "menu-item active"
+                : "menu-item"
+            }
+          >
+            <FaDog />
+            Hewan
+          </NavLink>
+
+          {/* JADWAL */}
+          <NavLink
+            to="/jadwal"
+            className={({ isActive }) =>
+              isActive
+                ? "menu-item active"
+                : "menu-item"
+            }
+          >
+            <FaCalendarAlt />
+            Jadwal
+          </NavLink>
+
+          {/* PEMBAYARAN */}
+          <NavLink
+            to="/pembayaran"
+            className={({ isActive }) =>
+              isActive
+                ? "menu-item active"
+                : "menu-item"
+            }
+          >
+            <FaMoneyBillWave />
+            Pembayaran
+          </NavLink>
+
+          {/* REKAM MEDIS */}
+          <NavLink
+            to="/rekam-medis"
+            className={({ isActive }) =>
+              isActive
+                ? "menu-item active"
+                : "menu-item"
+            }
+          >
+            <FaFileMedical />
+            Rekam Medis
+          </NavLink>
+
+        </div>
+
+      </div>
+
+      {/* BOTTOM */}
+      <div>
+
+        {/* PROFILE */}
+        <div className="profile-box">
+
+          <img
+            src="https://i.pravatar.cc/100"
+            alt=""
+          />
+
+          <div>
+            <h4>Dika</h4>
+            <p>Administrator</p>
+          </div>
+
+        </div>
+
+        {/* LOGOUT */}
+        <button
+          className="logout-btn"
+          onClick={handleLogout}
+        >
+
+          <FaSignOutAlt />
+
+          Logout
+
+        </button>
+
+      </div>
+
     </aside>
   );
-}
+};
+
+export default Sidebar;

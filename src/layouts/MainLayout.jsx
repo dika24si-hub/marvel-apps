@@ -1,19 +1,37 @@
-import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import { Outlet } from "react-router-dom";
 
-export default function MainLayout() {
+const MainLayout = () => {
   return (
-    <div className="main-layout">
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        background: "#f4f7fb",
+      }}
+    >
       <Sidebar />
 
-      <div className="main-content">
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Navbar />
 
-        <main className="page-content">
+        <main
+          style={{
+            padding: "30px",
+          }}
+        >
           <Outlet />
         </main>
       </div>
     </div>
   );
-}
+};
+
+export default MainLayout;

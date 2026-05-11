@@ -1,0 +1,28 @@
+.navbar{
+  background:white;
+  padding:20px 30px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.navbar input{
+  width:320px;
+  padding:14px 18px;
+  border:none;
+  background:#f3f4f6;
+  border-radius:14px;
+  outline:none;
+  font-size:15px;
+}
+
+.nav-right button{
+  background:#0f766e;
+  color:white;
+  border:none;
+  padding:13px 24px;
+  border-radius:14px;
+  font-weight:600;
+  cursor:pointer;
+}
