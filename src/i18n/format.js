@@ -1,53 +1,74 @@
 /**
- * Helper formatting yang ikut bahasa aktif.
- * - formatDate: terima "10 Mei 2026" → terjemahkan nama bulan
- * - formatDay: terima "Sen"/"Senin" → terjemahkan
- * - formatAmount: Rupiah dengan locale yang cocok
+ * Format helper untuk tanggal & mata uang yang ikut bahasa.
+ *
+ * Tanggal di data ditulis dalam format Indonesia ("10 Mei 2026").
+ * Saat lang === "en", kita konversi ke "10 May 2026".
  */
 
-// Peta bulan ID ↔ panjang & singkatan
-const MONTH_MAP = {
-  id: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"],
-  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+const MONTH_ID_TO_EN = {
+  Jan: "Jan",
+  Feb: "Feb",
+  Mar: "Mar",
+  Apr: "Apr",
+  Mei: "May",
+  Jun: "Jun",
+  Jul: "Jul",
+  Agu: "Aug",
+  Agust: "Aug",
+  Agus: "Aug",
+  Agust: "Aug",
+  Sep: "Sep",
+  Okt: "Oct",
+  Nov: "Nov",
+  Des: "Dec",
+};
+
+const MONTH_EN_TO_ID = {
+  Jan: "Jan",
+  Feb: "Feb",
+  Mar: "Mar",
+  Apr: "Apr",
+  May: "Mei",
+  Jun: "Jun",
+  Jul: "Jul",
+  Aug: "Agu",
+  Sep: "Sep",
+  Oct: "Okt",
+  Nov: "Nov",
+  Dec: "Des",
 };
 
 /**
- * Terima string tanggal format "DD MMM YYYY" versi ID (mis: "10 Mei 2026")
- * lalu kembalikan versi yang sesuai bahasa `lang`.
+ * Konversi tanggal "DD MMM YYYY" antara ID dan EN.
+ * Kalau format tidak dikenali, kembalikan apa adanya.
  */
-export function formatDate(str, lang = "id") {
-  if (!str) return str;
-  const parts = str.trim().split(/\s+/);
-  if (parts.length !== 3) return str;
+export function formatDate(value, lang = "id") {
+  if (!value || typeof value !== "string") return value ?? "";
 
-  const [day, monthId, year] = parts;
-  const idx = MONTH_MAP.id.indexOf(monthId);
-  if (idx === -1) return str;
+  const parts = value.trim().split(/\s+/);
+  if (parts.length !== 3) return value;
 
-  const monthOut = MONTH_MAP[lang]?.[idx] ?? monthId;
-  return `${day} ${monthOut} ${year}`;
-}
+  const [day, monthRaw, year] = parts;
+  let month = monthRaw;
 
-/**
- * Format mata uang (default Rupiah karena semua harga dummy dalam IDR).
- */
-export function formatCurrency(n, lang = "id") {
-  try {
-    const locale = lang === "en" ? "en-US" : "id-ID";
-    return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return "Rp " + n.toLocaleString("id-ID");
+  if (lang === "en") {
+    month = MONTH_ID_TO_EN[monthRaw] ?? MONTH_EN_TO_ID[monthRaw] ?? monthRaw;
+  } else {
+    month = MONTH_EN_TO_ID[monthRaw] ?? monthRaw;
   }
+
+  return `${day} ${month} ${year}`;
 }
 
 /**
- * Format angka umum.
+ * Format angka jadi mata uang.
+ *  - id: "Rp 1.500.000"
+ *  - en: "$ 1,500,000"  (estimasi sederhana, tetap pakai jumlah Rupiah)
  */
-export function formatNumber(n, lang = "id") {
-  const locale = lang === "en" ? "en-US" : "id-ID";
-  return new Intl.NumberFormat(locale).format(n);
+export function formatCurrency(value, lang = "id") {
+  if (typeof value !== "number") return value;
+
+  const formatter = new Intl.NumberFormat(lang === "en" ? "en-US" : "id-ID");
+  const symbol = lang === "en" ? "Rp" : "Rp"; // tetap Rupiah karena ini klinik di ID
+  return `${symbol} ${formatter.format(value)}`;
 }

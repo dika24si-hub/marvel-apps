@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 import {
   FaPlus,
   FaEye,
-  FaSearch,
-  FaFilter,
   FaPaw,
   FaDog,
   FaCat,
@@ -14,16 +12,29 @@ import {
 } from "react-icons/fa";
 import { useLang } from "../i18n/LanguageContext";
 import { formatDate } from "../i18n/format";
+import { usePageSearch } from "../context/SearchContext";
+
+import {
+  PageHeader,
+  Button,
+  StatCard,
+  FilterChips,
+  Card,
+  Table,
+  Badge,
+  EmptyState,
+  Pagination,
+} from "../components/ui";
 
 const DATA = [
-  { no: 1, nama: "Milo", jenis: "Kucing", ras: "Persia", umur: 2, kelamin: "Jantan", pemilik: "Budi Santoso", status: "Sehat", terakhir: "10 Apr 2026" },
-  { no: 2, nama: "Rocky", jenis: "Anjing", ras: "Golden Retriever", umur: 3, kelamin: "Jantan", pemilik: "Andi Wijaya", status: "Perawatan", terakhir: "05 Mei 2026" },
-  { no: 3, nama: "Luna", jenis: "Kucing", ras: "Anggora", umur: 1, kelamin: "Betina", pemilik: "Sari Indah", status: "Vaksin", terakhir: "01 Mei 2026" },
-  { no: 4, nama: "Bruno", jenis: "Anjing", ras: "Bulldog", umur: 4, kelamin: "Jantan", pemilik: "Rizky Pratama", status: "Sehat", terakhir: "28 Apr 2026" },
-  { no: 5, nama: "Coco", jenis: "Kucing", ras: "Maine Coon", umur: 2, kelamin: "Betina", pemilik: "Dewi Lestari", status: "Perawatan", terakhir: "02 Mei 2026" },
+  { no: 1, nama: "Milo",  jenis: "Kucing", ras: "Persia",          umur: 2, kelamin: "Jantan", pemilik: "Budi Santoso",  status: "Sehat",     terakhir: "10 Apr 2026" },
+  { no: 2, nama: "Rocky", jenis: "Anjing", ras: "Golden Retriever",umur: 3, kelamin: "Jantan", pemilik: "Andi Wijaya",   status: "Perawatan", terakhir: "05 Mei 2026" },
+  { no: 3, nama: "Luna",  jenis: "Kucing", ras: "Anggora",         umur: 1, kelamin: "Betina", pemilik: "Sari Indah",    status: "Vaksin",    terakhir: "01 Mei 2026" },
+  { no: 4, nama: "Bruno", jenis: "Anjing", ras: "Bulldog",         umur: 4, kelamin: "Jantan", pemilik: "Rizky Pratama", status: "Sehat",     terakhir: "28 Apr 2026" },
+  { no: 5, nama: "Coco",  jenis: "Kucing", ras: "Maine Coon",      umur: 2, kelamin: "Betina", pemilik: "Dewi Lestari",  status: "Perawatan", terakhir: "02 Mei 2026" },
 ];
 
-const STATUS_COLOR = {
+const STATUS_VARIANT = {
   Sehat: "success",
   Perawatan: "warning",
   Vaksin: "info",
@@ -35,25 +46,27 @@ function PetIcon({ jenis }) {
   return <FaPaw />;
 }
 
+const PER_PAGE = 3;
+
 export default function Hewan() {
   const { t, lang } = useLang();
-  const [keyword, setKeyword] = useState("");
+  const { matches } = usePageSearch(t("hewan.searchPlaceholder"));
   const [filter, setFilter] = useState("Semua");
+  const [page, setPage] = useState(1);
 
-  // Label umur yang ikut bahasa
-  const formatAge = (n) => (lang === "en" ? `${n} year${n > 1 ? "s" : ""}` : `${n} Tahun`);
+  const formatAge = (n) =>
+    lang === "en" ? `${n} year${n > 1 ? "s" : ""}` : `${n} Tahun`;
 
   const filtered = useMemo(() => {
     return DATA.filter((d) => {
-      const q = keyword.toLowerCase();
-      const matchKey =
-        d.nama.toLowerCase().includes(q) ||
-        d.pemilik.toLowerCase().includes(q) ||
-        d.ras.toLowerCase().includes(q);
+      const matchKey = matches(d.nama, d.pemilik, d.ras);
       const matchFilter = filter === "Semua" || d.jenis === filter;
       return matchKey && matchFilter;
     });
-  }, [keyword, filter]);
+  }, [matches, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const stats = useMemo(
     () => ({
@@ -67,152 +80,117 @@ export default function Hewan() {
 
   return (
     <div>
-      {/* HEADER */}
-      <div className="page-header">
-        <div>
-          <h1>{t("hewan.title")}</h1>
-          <p>{t("hewan.breadcrumb")}</p>
-        </div>
+      {/* 🟢 Komponen #1 PageHeader  +  #2 Button */}
+      <PageHeader
+        title={t("hewan.title")}
+        subtitle={t("hewan.breadcrumb")}
+        actions={
+          <Button variant="primary" leftIcon={<FaPlus />}>
+            {t("hewan.addBtn")}
+          </Button>
+        }
+      />
 
-        <button className="add-button">
-          <FaPlus /> {t("hewan.addBtn")}
-        </button>
+      {/* 🟢 Komponen #3 StatCard */}
+      <div className="mini-stats" style={{ marginTop: 14 }}>
+        <StatCard icon={<FaPaw />}        color="primary" label={t("hewan.totalHewan")}    value={stats.total} />
+        <StatCard icon={<FaHeartbeat />}  color="success" label={t("hewan.kondisiSehat")} value={stats.sehat} />
+        <StatCard icon={<FaStethoscope />}color="warning" label={t("hewan.perawatan")}    value={stats.perawatan} />
+        <StatCard icon={<FaSyringe />}    color="info"    label={t("hewan.vaksinasi")}    value={stats.vaksin} />
       </div>
 
-      {/* MINI STATS */}
-      <div className="mini-stats">
-        <div className="mini-stat">
-          <div className="mini-stat-icon primary"><FaPaw /></div>
-          <div><p>{t("hewan.totalHewan")}</p><h3>{stats.total}</h3></div>
-        </div>
-        <div className="mini-stat">
-          <div className="mini-stat-icon success"><FaHeartbeat /></div>
-          <div><p>{t("hewan.kondisiSehat")}</p><h3>{stats.sehat}</h3></div>
-        </div>
-        <div className="mini-stat">
-          <div className="mini-stat-icon warning"><FaStethoscope /></div>
-          <div><p>{t("hewan.perawatan")}</p><h3>{stats.perawatan}</h3></div>
-        </div>
-        <div className="mini-stat">
-          <div className="mini-stat-icon info"><FaSyringe /></div>
-          <div><p>{t("hewan.vaksinasi")}</p><h3>{stats.vaksin}</h3></div>
-        </div>
-      </div>
-
-      {/* TOOLBAR */}
-      <div className="toolbar">
-        <div className="toolbar-search">
-          <FaSearch />
-          <input
-            type="text"
-            placeholder={t("hewan.searchPlaceholder")}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-        </div>
-
-        <div className="filter-chips">
-          <FaFilter className="filter-icon" />
-          {[
+      {/* 🟢 Komponen #4 FilterChips */}
+      <div className="toolbar toolbar-filter-only" style={{ marginTop: 14 }}>
+        <FilterChips
+          label="Filter"
+          value={filter}
+          onChange={(k) => {
+            setFilter(k);
+            setPage(1);
+          }}
+          options={[
             { key: "Semua", label: t("common.all") },
             { key: "Kucing", label: t("jenis.Kucing") },
             { key: "Anjing", label: t("jenis.Anjing") },
-          ].map((f) => (
-            <button
-              key={f.key}
-              className={`chip ${filter === f.key ? "active" : ""}`}
-              onClick={() => setFilter(f.key)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+          ]}
+        />
       </div>
 
-      {/* TABLE */}
-      <div className="table-card">
-        <div className="card-header">
-          <h3>{t("hewan.daftarHewan")}</h3>
-          <span>
-            {t("common.showing")} {filtered.length} {t("common.data")}
-          </span>
-        </div>
+      {/* 🟢 Komponen #5 Card  +  #6 Table  +  #7 Badge  +  #8 EmptyState  +  #9 Pagination */}
+      <Card
+        title={t("hewan.daftarHewan")}
+        subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+      >
+        <Table
+          rowKey="no"
+          data={pageRows}
+          empty={
+            <EmptyState
+              title={t("common.noMatch")}
+              description="Coba ubah keyword pencarian atau filter."
+            />
+          }
+          columns={[
+            { key: "no", header: t("table.no"),
+              render: (r) => <span className="muted">#{String(r.no).padStart(2, "0")}</span> },
+            { key: "hewan", header: t("table.hewan"),
+              render: (r) => (
+                <div className="pet-cell">
+                  <div className={`pet-thumb ${r.jenis === "Anjing" ? "orange" : "blue"}`}>
+                    <PetIcon jenis={r.jenis} />
+                  </div>
+                  <div>
+                    <b>{r.nama}</b>
+                    <small>ID-HW{String(r.no).padStart(3, "0")}</small>
+                  </div>
+                </div>
+              ),
+            },
+            { key: "jenis", header: t("table.jenisRas"),
+              render: (r) => (
+                <>
+                  <b>{t(`jenis.${r.jenis}`)}</b>
+                  <small className="block muted">{r.ras}</small>
+                </>
+              ),
+            },
+            { key: "umur", header: t("table.umur"),
+              render: (r) => formatAge(r.umur) },
+            { key: "kelamin", header: t("table.kelamin"),
+              render: (r) => (
+                <Badge variant={r.kelamin === "Jantan" ? "info" : "danger"}>
+                  {t(`kelamin.${r.kelamin}`)}
+                </Badge>
+              ),
+            },
+            { key: "pemilik", header: t("table.pemilik") },
+            { key: "terakhir", header: t("table.kunjunganTerakhir"),
+              render: (r) => <span className="muted">{formatDate(r.terakhir, lang)}</span> },
+            { key: "status", header: t("table.status"),
+              render: (r) => (
+                <Badge variant={STATUS_VARIANT[r.status]} dot>
+                  {t(`status.${r.status}`)}
+                </Badge>
+              ),
+            },
+            { key: "act", header: t("table.aksi"), align: "right",
+              render: (r) => (
+                <Link to={`/hewan/${r.no}`}>
+                  <Button variant="ghost" size="sm" leftIcon={<FaEye />}>
+                    {t("common.detail")}
+                  </Button>
+                </Link>
+              ),
+            },
+          ]}
+        />
 
-        <div style={{ overflowX: "auto" }}>
-          <table className="pretty-table">
-            <thead>
-              <tr>
-                <th>{t("table.no")}</th>
-                <th>{t("table.hewan")}</th>
-                <th>{t("table.jenisRas")}</th>
-                <th>{t("table.umur")}</th>
-                <th>{t("table.kelamin")}</th>
-                <th>{t("table.pemilik")}</th>
-                <th>{t("table.kunjunganTerakhir")}</th>
-                <th>{t("table.status")}</th>
-                <th style={{ textAlign: "right" }}>{t("table.aksi")}</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>
-                    {t("common.noMatch")}
-                  </td>
-                </tr>
-              )}
-
-              {filtered.map((item) => (
-                <tr key={item.no}>
-                  <td className="muted">#{String(item.no).padStart(2, "0")}</td>
-
-                  <td>
-                    <div className="pet-cell">
-                      <div className={`pet-thumb ${item.jenis === "Anjing" ? "orange" : "blue"}`}>
-                        <PetIcon jenis={item.jenis} />
-                      </div>
-                      <div>
-                        <b>{item.nama}</b>
-                        <small>ID-HW{String(item.no).padStart(3, "0")}</small>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td>
-                    <b>{t(`jenis.${item.jenis}`)}</b>
-                    <small className="block muted">{item.ras}</small>
-                  </td>
-
-                  <td>{formatAge(item.umur)}</td>
-
-                  <td>
-                    <span className={`gender ${item.kelamin === "Jantan" ? "male" : "female"}`}>
-                      {t(`kelamin.${item.kelamin}`)}
-                    </span>
-                  </td>
-
-                  <td>{item.pemilik}</td>
-
-                  <td className="muted">{formatDate(item.terakhir, lang)}</td>
-
-                  <td>
-                    <span className={`status-pill ${STATUS_COLOR[item.status]}`}>
-                      <span className="dot" /> {t(`status.${item.status}`)}
-                    </span>
-                  </td>
-
-                  <td style={{ textAlign: "right" }}>
-                    <Link to={`/hewan/${item.no}`} className="detail-btn">
-                      <FaEye /> {t("common.detail")}
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        {filtered.length > PER_PAGE && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

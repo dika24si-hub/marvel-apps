@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   FaPlus,
-  FaSearch,
-  FaFilter,
   FaCalendarAlt,
   FaCheckCircle,
   FaClock,
@@ -12,10 +10,23 @@ import {
 } from "react-icons/fa";
 import { useLang } from "../i18n/LanguageContext";
 import { formatDate } from "../i18n/format";
+import { usePageSearch } from "../context/SearchContext";
 
-// Keperluan dibuat key supaya bisa di-translate
+import {
+  PageHeader,
+  Button,
+  StatCard,
+  FilterChips,
+  Card,
+  Table,
+  Badge,
+  Tag,
+  EmptyState,
+  Pagination,
+} from "../components/ui";
+
 const DATA = [
-  { no: 1, hewan: "Milo",  jenis: "Kucing", pemilik: "Budi Santoso",  dokter: "Dr. Dika Pratama",  tanggal: "12 Mei 2026", jam: "09:00", keperluanKey: "vaksinRabies",   ruang: "R-101", status: "Terjadwal"   },
+  { no: 1, hewan: "Milo",  jenis: "Kucing", pemilik: "Budi Santoso",  dokter: "Dr. Dika Pratama",   tanggal: "12 Mei 2026", jam: "09:00", keperluanKey: "vaksinRabies",   ruang: "R-101", status: "Terjadwal"   },
   { no: 2, hewan: "Rocky", jenis: "Anjing", pemilik: "Andi Wijaya",   dokter: "Dr. Felix Hartanto", tanggal: "12 Mei 2026", jam: "10:30", keperluanKey: "kontrolOperasi", ruang: "R-102", status: "Berlangsung" },
   { no: 3, hewan: "Luna",  jenis: "Kucing", pemilik: "Sari Indah",    dokter: "Dr. Kiran Nugraha",  tanggal: "11 Mei 2026", jam: "13:00", keperluanKey: "vaksinTricat",   ruang: "R-103", status: "Selesai"     },
   { no: 4, hewan: "Bruno", jenis: "Anjing", pemilik: "Rizky Pratama", dokter: "Dr. Clara Wijayanti",tanggal: "13 Mei 2026", jam: "08:30", keperluanKey: "grooming",       ruang: "R-105", status: "Terjadwal"   },
@@ -23,23 +34,11 @@ const DATA = [
 ];
 
 const KEPERLUAN_LABEL = {
-  id: {
-    vaksinRabies: "Vaksin Rabies",
-    kontrolOperasi: "Kontrol Pasca Operasi",
-    vaksinTricat: "Vaksin Tricat",
-    grooming: "Grooming",
-    checkupRutin: "Checkup Rutin",
-  },
-  en: {
-    vaksinRabies: "Rabies Vaccine",
-    kontrolOperasi: "Post-Op Checkup",
-    vaksinTricat: "Tricat Vaccine",
-    grooming: "Grooming",
-    checkupRutin: "Routine Checkup",
-  },
+  id: { vaksinRabies: "Vaksin Rabies", kontrolOperasi: "Kontrol Pasca Operasi", vaksinTricat: "Vaksin Tricat", grooming: "Grooming", checkupRutin: "Checkup Rutin" },
+  en: { vaksinRabies: "Rabies Vaccine", kontrolOperasi: "Post-Op Checkup", vaksinTricat: "Tricat Vaccine", grooming: "Grooming", checkupRutin: "Routine Checkup" },
 };
 
-const STATUS_COLOR = {
+const STATUS_VARIANT = {
   Terjadwal: "info",
   Berlangsung: "warning",
   Selesai: "success",
@@ -52,26 +51,32 @@ function PetIcon({ jenis }) {
   return <FaPaw />;
 }
 
+const PER_PAGE = 3;
+
 export default function Jadwal() {
   const { t, lang } = useLang();
-  const [keyword, setKeyword] = useState("");
+  const { matches } = usePageSearch(t("jadwal.searchPlaceholder"));
   const [filter, setFilter] = useState("Semua");
+  const [page, setPage] = useState(1);
 
   const keperluanLabel = (key) => KEPERLUAN_LABEL[lang]?.[key] ?? key;
 
   const filtered = useMemo(() => {
-    const q = keyword.toLowerCase();
     return DATA.filter((d) => {
-      const matchKey =
-        d.hewan.toLowerCase().includes(q) ||
-        d.pemilik.toLowerCase().includes(q) ||
-        d.dokter.toLowerCase().includes(q) ||
-        keperluanLabel(d.keperluanKey).toLowerCase().includes(q);
+      const matchKey = matches(
+        d.hewan,
+        d.pemilik,
+        d.dokter,
+        keperluanLabel(d.keperluanKey)
+      );
       const matchFilter = filter === "Semua" || d.status === filter;
       return matchKey && matchFilter;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, filter, lang]);
+  }, [matches, filter, lang]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const stats = useMemo(
     () => ({
@@ -87,140 +92,95 @@ export default function Jadwal() {
 
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <h1>{t("jadwal.title")}</h1>
-          <p>{t("jadwal.breadcrumb")}</p>
-        </div>
-        <button className="add-button">
-          <FaPlus /> {t("jadwal.addBtn")}
-        </button>
+      <PageHeader
+        title={t("jadwal.title")}
+        subtitle={t("jadwal.breadcrumb")}
+        actions={
+          <Button variant="primary" leftIcon={<FaPlus />}>
+            {t("jadwal.addBtn")}
+          </Button>
+        }
+      />
+
+      <div className="mini-stats" style={{ marginTop: 14 }}>
+        <StatCard icon={<FaCalendarAlt />} color="primary" label={t("jadwal.totalJadwal")}  value={stats.total} />
+        <StatCard icon={<FaClock />}       color="info"    label={t("jadwal.terjadwal")}    value={stats.terjadwal} />
+        <StatCard icon={<FaClock />}       color="warning" label={t("jadwal.berlangsung")}  value={stats.berlangsung} />
+        <StatCard icon={<FaCheckCircle />} color="success" label={t("jadwal.selesai")}      value={stats.selesai} />
       </div>
 
-      <div className="mini-stats">
-        <div className="mini-stat">
-          <div className="mini-stat-icon primary"><FaCalendarAlt /></div>
-          <div><p>{t("jadwal.totalJadwal")}</p><h3>{stats.total}</h3></div>
-        </div>
-        <div className="mini-stat">
-          <div className="mini-stat-icon info"><FaClock /></div>
-          <div><p>{t("jadwal.terjadwal")}</p><h3>{stats.terjadwal}</h3></div>
-        </div>
-        <div className="mini-stat">
-          <div className="mini-stat-icon warning"><FaClock /></div>
-          <div><p>{t("jadwal.berlangsung")}</p><h3>{stats.berlangsung}</h3></div>
-        </div>
-        <div className="mini-stat">
-          <div className="mini-stat-icon success"><FaCheckCircle /></div>
-          <div><p>{t("jadwal.selesai")}</p><h3>{stats.selesai}</h3></div>
-        </div>
+      <div className="toolbar toolbar-filter-only" style={{ marginTop: 14 }}>
+        <FilterChips
+          label="Filter"
+          value={filter}
+          onChange={(k) => {
+            setFilter(k);
+            setPage(1);
+          }}
+          options={filterKeys.map((f) => ({
+            key: f,
+            label: f === "Semua" ? t("common.all") : t(`status.${f}`),
+          }))}
+        />
       </div>
 
-      <div className="toolbar">
-        <div className="toolbar-search">
-          <FaSearch />
-          <input
-            type="text"
-            placeholder={t("jadwal.searchPlaceholder")}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-        </div>
+      <Card
+        title={t("jadwal.daftarJadwal")}
+        subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+      >
+        <Table
+          rowKey="no"
+          data={pageRows}
+          empty={<EmptyState title={t("common.noMatch")} />}
+          columns={[
+            { key: "no", header: t("table.no"),
+              render: (r) => <span className="muted">#{String(r.no).padStart(2, "0")}</span> },
+            { key: "hewan", header: t("table.hewan"),
+              render: (r) => (
+                <div className="pet-cell">
+                  <div className={`pet-thumb ${r.jenis === "Anjing" ? "orange" : "blue"}`}>
+                    <PetIcon jenis={r.jenis} />
+                  </div>
+                  <div>
+                    <b>{r.hewan}</b>
+                    <small>{t(`jenis.${r.jenis}`)}</small>
+                  </div>
+                </div>
+              ),
+            },
+            { key: "pemilik", header: t("table.pemilik") },
+            { key: "dokter", header: t("table.dokter") },
+            { key: "tanggalJam", header: t("table.tanggalJam"),
+              render: (r) => (
+                <div className="date-cell">
+                  <FaCalendarAlt />
+                  <div>
+                    <b>{formatDate(r.tanggal, lang)}</b>
+                    <small>{r.jam} {t("common.tz")}</small>
+                  </div>
+                </div>
+              ),
+            },
+            { key: "keperluan", header: t("table.keperluan"),
+              render: (r) => <Tag color="brand">{keperluanLabel(r.keperluanKey)}</Tag> },
+            { key: "ruang", header: t("table.ruang"),
+              render: (r) => <Tag color="default">{r.ruang}</Tag> },
+            { key: "status", header: t("table.status"),
+              render: (r) => (
+                <Badge variant={STATUS_VARIANT[r.status]} dot>
+                  {t(`status.${r.status}`)}
+                </Badge>
+              ),
+            },
+          ]}
+        />
 
-        <div className="filter-chips">
-          <FaFilter className="filter-icon" />
-          {filterKeys.map((f) => (
-            <button
-              key={f}
-              className={`chip ${filter === f ? "active" : ""}`}
-              onClick={() => setFilter(f)}
-            >
-              {f === "Semua" ? t("common.all") : t(`status.${f}`)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="table-card">
-        <div className="card-header">
-          <h3>{t("jadwal.daftarJadwal")}</h3>
-          <span>
-            {t("common.showing")} {filtered.length} {t("common.data")}
-          </span>
-        </div>
-
-        <div style={{ overflowX: "auto" }}>
-          <table className="pretty-table">
-            <thead>
-              <tr>
-                <th>{t("table.no")}</th>
-                <th>{t("table.hewan")}</th>
-                <th>{t("table.pemilik")}</th>
-                <th>{t("table.dokter")}</th>
-                <th>{t("table.tanggalJam")}</th>
-                <th>{t("table.keperluan")}</th>
-                <th>{t("table.ruang")}</th>
-                <th>{t("table.status")}</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>
-                    {t("common.noMatch")}
-                  </td>
-                </tr>
-              )}
-
-              {filtered.map((item) => (
-                <tr key={item.no}>
-                  <td className="muted">#{String(item.no).padStart(2, "0")}</td>
-
-                  <td>
-                    <div className="pet-cell">
-                      <div className={`pet-thumb ${item.jenis === "Anjing" ? "orange" : "blue"}`}>
-                        <PetIcon jenis={item.jenis} />
-                      </div>
-                      <div>
-                        <b>{item.hewan}</b>
-                        <small>{t(`jenis.${item.jenis}`)}</small>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td>{item.pemilik}</td>
-                  <td>{item.dokter}</td>
-
-                  <td>
-                    <div className="date-cell">
-                      <FaCalendarAlt />
-                      <div>
-                        <b>{formatDate(item.tanggal, lang)}</b>
-                        <small>{item.jam} {t("common.tz")}</small>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td>
-                    <span className="spec-tag">{keperluanLabel(item.keperluanKey)}</span>
-                  </td>
-
-                  <td>
-                    <span className="room-tag">{item.ruang}</span>
-                  </td>
-
-                  <td>
-                    <span className={`status-pill ${STATUS_COLOR[item.status]}`}>
-                      <span className="dot" /> {t(`status.${item.status}`)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        {filtered.length > PER_PAGE && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

@@ -1,63 +1,53 @@
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 
 import MainLayout from "../layouts/MainLayout";
+import AuthLayout from "../layouts/AuthLayout";
+import Loading from "../components/Loading";
 import Guards from "./guards";
 
-import Dashboard from "../pages/Dashboard";
-import Dokter from "../pages/Dokter";
-import Hewan from "../pages/Hewan";
+// Lazy hanya di level page
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Hewan = lazy(() => import("../pages/Hewan"));
+const HewanDetail = lazy(() => import("../pages/HewanDetail"));
+const Dokter = lazy(() => import("../pages/Dokter"));
+const DokterDetail = lazy(() => import("../pages/DokterDetail"));
+const Jadwal = lazy(() => import("../pages/Jadwal"));
+const RekamMedis = lazy(() => import("../pages/RekamMedis"));
+const Pembayaran = lazy(() => import("../pages/Pembayaran"));
+const Login = lazy(() => import("../pages/auth/Login"));
 
-import Login from "../pages/auth/Login";
-
-const AppRouter = () => {
-
+export default function AppRouter() {
   return (
-
     <BrowserRouter>
-
-      <Routes>
-
-        {/* LOGIN */}
-        <Route
-          path="/login"
-          element={<Login />}
-        />
-
-        {/* PRIVATE */}
-        <Route
-          path="/"
-          element={
-            <Guards>
-              <MainLayout />
-            </Guards>
-          }
-        >
-
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          {/* PRIVATE ROUTES — wajib login */}
           <Route
-            index
-            element={<Dashboard />}
-          />
+            element={
+              <Guards>
+                <MainLayout />
+              </Guards>
+            }
+          >
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/hewan" element={<Hewan />} />
+            <Route path="/hewan/:id" element={<HewanDetail />} />
+            <Route path="/dokter" element={<Dokter />} />
+            <Route path="/dokter/:id" element={<DokterDetail />} />
+            <Route path="/jadwal" element={<Jadwal />} />
+            <Route path="/rekam-medis" element={<RekamMedis />} />
+            <Route path="/pembayaran" element={<Pembayaran />} />
+          </Route>
 
-          <Route
-            path="dokter"
-            element={<Dokter />}
-          />
+          {/* PUBLIC ROUTES */}
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<Login />} />
+          </Route>
 
-          <Route
-            path="hewan"
-            element={<Hewan />}
-          />
-
-        </Route>
-
-      </Routes>
-
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
-};
-
-export default AppRouter;
+}

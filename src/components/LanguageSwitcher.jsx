@@ -3,8 +3,8 @@ import { FaGlobe, FaCheck, FaChevronDown } from "react-icons/fa";
 import { useLang } from "../i18n/LanguageContext";
 
 const OPTIONS = [
-  { code: "id", label: "Bahasa Indonesia", flag: "🇮🇩", short: "ID" },
-  { code: "en", label: "English", flag: "🇬🇧", short: "EN" },
+  { code: "id", short: "ID", label: "Bahasa Indonesia" },
+  { code: "en", short: "EN", label: "English" },
 ];
 
 export default function LanguageSwitcher() {
@@ -14,7 +14,6 @@ export default function LanguageSwitcher() {
 
   const active = OPTIONS.find((o) => o.code === lang) ?? OPTIONS[0];
 
-  // Close on outside click
   useEffect(() => {
     function onClick(e) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -33,7 +32,6 @@ export default function LanguageSwitcher() {
         aria-expanded={open}
       >
         <FaGlobe />
-        <span className="flag">{active.flag}</span>
         <span className="code">{active.short}</span>
         <FaChevronDown className={`caret ${open ? "open" : ""}`} />
       </button>
@@ -52,7 +50,7 @@ export default function LanguageSwitcher() {
                 role="option"
                 aria-selected={opt.code === lang}
               >
-                <span className="flag">{opt.flag}</span>
+                <span className="lang-code">{opt.short}</span>
                 <span className="label">{opt.label}</span>
                 {opt.code === lang && <FaCheck className="check" />}
               </button>

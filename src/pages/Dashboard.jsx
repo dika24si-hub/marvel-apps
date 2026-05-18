@@ -1,292 +1,358 @@
 import {
+  FaPlus,
+  FaArrowUp,
+  FaArrowDown,
+  FaArrowRight,
+  FaPaw,
+  FaSyringe,
+  FaCalendarPlus,
+  FaUserMd,
+  FaProcedures,
+  FaHeartbeat,
+  FaSlidersH,
+  FaSortAmountDown,
+  FaEllipsisH,
+  FaCog,
+  FaDog,
+  FaCat,
+  FaStethoscope,
+} from "react-icons/fa";
+import {
   ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
+  YAxis,
   Tooltip,
+  CartesianGrid,
 } from "recharts";
+import { useLang } from "../i18n/LanguageContext";
 
-import {
-  FaArrowUp,
-  FaArrowDown,
-  FaWallet,
-  FaPiggyBank,
-  FaFileInvoiceDollar,
-} from "react-icons/fa";
-
-const chartData = [
-  { name: "18 Oct", income: 4, expense: -3 },
-  { name: "20 Oct", income: 2, expense: -1 },
-  { name: "22 Oct", income: 5, expense: -2 },
-  { name: "25 Oct", income: 6, expense: -4 },
-  { name: "28 Oct", income: 3, expense: -1 },
-  { name: "2 Nov", income: 4, expense: -2 },
-  { name: "9 Nov", income: 5, expense: -3 },
+// Statistik kunjungan harian (visit & treatment)
+const visitData = [
+  { d: "18 Apr", visit: 14, treat: -8 },
+  { d: "19", visit: 22, treat: -10 },
+  { d: "20", visit: 18, treat: -16 },
+  { d: "21", visit: 25, treat: -9 },
+  { d: "22", visit: 28, treat: -14 },
+  { d: "23", visit: 20, treat: -11 },
+  { d: "24", visit: 16, treat: -7 },
+  { d: "25 Apr", visit: 30, treat: -10 },
+  { d: "26", visit: 24, treat: -12 },
+  { d: "27", visit: 26, treat: -15 },
+  { d: "28", visit: 18, treat: -13 },
+  { d: "29", visit: 14, treat: -8 },
+  { d: "30", visit: 22, treat: -9 },
+  { d: "1 Mei", visit: 28, treat: -14 },
+  { d: "2", visit: 21, treat: -10 },
+  { d: "3", visit: 17, treat: -8 },
+  { d: "4", visit: 15, treat: -9 },
+  { d: "5", visit: 26, treat: -11 },
+  { d: "9 Mei", visit: 19, treat: -7 },
 ];
 
-const Dashboard = () => {
+export default function Dashboard() {
+  const { t } = useLang();
+
+  const activities = [
+    {
+      id: 1,
+      type: "in",
+      icon: <FaCat />,
+      name: "Milo",
+      sub: t("activities.sub.milo"),
+      service: t("activities.vaksin"),
+      serviceSub: "08:30 WIB",
+      status: t("activities.selesai"),
+      pillVariant: "success",
+      doctor: "Dr. Dika",
+      doctorSub: t("sidebar.role"),
+    },
+    {
+      id: 2,
+      type: "out",
+      icon: <FaDog />,
+      name: "Rocky",
+      sub: t("activities.sub.rocky"),
+      service: t("activities.operasi"),
+      serviceSub: "10:00 WIB",
+      status: t("activities.proses"),
+      pillVariant: "pending",
+      doctor: "Dr. Felix",
+      doctorSub: t("sidebar.role"),
+    },
+    {
+      id: 3,
+      type: "in",
+      icon: <FaCat />,
+      name: "Luna",
+      sub: t("activities.sub.luna"),
+      service: t("activities.checkup"),
+      serviceSub: "13:15 WIB",
+      status: t("activities.selesai"),
+      pillVariant: "success",
+      doctor: "Dr. Kiran",
+      doctorSub: t("sidebar.role"),
+    },
+  ];
+
   return (
-    <div className="dashboard-page">
-
-      {/* HERO */}
-      <div className="hero-card">
-
-        <div>
-          <p>Total Pendapatan Klinik</p>
-          <h1>Rp 32.000.000</h1>
-        </div>
-
-        <div className="hero-buttons">
-          <button className="hero-btn green">
-            + Tambah
-          </button>
-
-          <button className="hero-btn dark">
-            Kirim
-          </button>
-
-          <button className="hero-btn dark">
-            Request
-          </button>
-        </div>
-
-      </div>
-
-      {/* CHART SECTION */}
-      <div className="dashboard-main-grid">
-
-        {/* LEFT */}
-        <div className="cashflow-card">
-
-          <div className="cashflow-header">
-
-            <h3>Cash Flow</h3>
-
-            <div className="cashflow-tabs">
-              <button className="active">
-                Weekly
-              </button>
-
-              <button>Daily</button>
-            </div>
-
+    <div>
+      {/* HERO – Total pendapatan klinik */}
+      <div className="balance-hero">
+        <div className="balance-row">
+          <div className="balance-info">
+            <p>{t("dashboard.heroLabel")}</p>
+            <h2>
+              Rp 320.845.200
+              <span className="delta">
+                <FaArrowUp /> 15.8%
+              </span>
+            </h2>
           </div>
 
-          <ResponsiveContainer
-            width="100%"
-            height={280}
-          >
-            <BarChart data={chartData}>
-              <XAxis dataKey="name" />
-              <Tooltip />
+          <div className="balance-actions">
+            <button className="bh-btn primary">
+              <FaPlus /> {t("dashboard.addPatient")}
+            </button>
+            <button className="bh-btn">
+              <FaSyringe /> {t("dashboard.addVaccine")}
+            </button>
+            <button className="bh-btn">
+              <FaCalendarPlus /> {t("dashboard.addAppointment")}
+            </button>
+            <button className="bh-btn icon" aria-label="More">
+              <FaEllipsisH />
+            </button>
+          </div>
+        </div>
+      </div>
 
-              <Bar
-                dataKey="income"
-                fill="#0f766e"
-                radius={[8, 8, 0, 0]}
-              />
+      {/* CHART + KPI */}
+      <div className="cashflow-row">
+        <div className="flow-card">
+          <div className="card-head">
+            <h3>
+              <FaHeartbeat /> {t("dashboard.visitChart")}
+            </h3>
 
-              <Bar
-                dataKey="expense"
-                fill="#22c55e"
-                radius={[8, 8, 0, 0]}
+            <div style={{ display: "flex", gap: 10 }}>
+              <div className="tab-group">
+                <button className="active">{t("common.weekly")}</button>
+                <button>{t("common.daily")}</button>
+              </div>
+              <button className="manage-btn">
+                <FaCog /> {t("common.manage")}
+              </button>
+            </div>
+          </div>
+
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={visitData} stackOffset="sign">
+              <CartesianGrid vertical={false} stroke="#eef1ea" />
+              <XAxis
+                dataKey="d"
+                stroke="#aab2ac"
+                tickLine={false}
+                axisLine={false}
+                fontSize={11}
+                interval={2}
               />
+              <YAxis
+                stroke="#aab2ac"
+                tickLine={false}
+                axisLine={false}
+                fontSize={11}
+              />
+              <Tooltip
+                cursor={{ fill: "rgba(22, 199, 132, 0.06)" }}
+                contentStyle={{
+                  borderRadius: 10,
+                  border: "1px solid #e5e9e2",
+                  fontSize: 12,
+                }}
+                formatter={(v, key) => [
+                  `${Math.abs(v)}`,
+                  key === "visit" ? t("dashboard.visit") : t("dashboard.treatment"),
+                ]}
+              />
+              <Bar dataKey="visit" stackId="cf" fill="#0e2d24" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="treat" stackId="cf" fill="#16c784" radius={[0, 0, 3, 3]} />
             </BarChart>
           </ResponsiveContainer>
-
         </div>
 
-        {/* RIGHT */}
-        <div className="summary-side">
-
-          <div className="summary-box">
-
-            <div className="summary-icon teal">
-              <FaArrowUp />
+        <div className="kpi-stack">
+          <div className="kpi-card">
+            <div className="kpi-icon green">
+              <FaPaw />
             </div>
-
-            <div>
-              <p>Income</p>
-              <h2>Rp 12.3JT</h2>
-              <span className="positive">
-                +45%
+            <div className="label">{t("dashboard.kpiPasien")}</div>
+            <div className="value">
+              218
+              <span className="delta-up" style={{ marginLeft: 8 }}>
+                <FaArrowUp /> 45.0%
               </span>
             </div>
-
+            <small style={{ color: "#7a857f", fontSize: 11.5, marginTop: 4 }}>
+              {t("dashboard.kpiPasienHelp")}
+            </small>
           </div>
 
-          <div className="summary-box">
-
-            <div className="summary-icon green">
-              <FaArrowDown />
+          <div className="kpi-card">
+            <div className="kpi-icon red">
+              <FaSyringe />
             </div>
-
-            <div>
-              <p>Expense</p>
-              <h2>Rp 5.7JT</h2>
-              <span className="negative">
-                -12%
+            <div className="label">{t("dashboard.kpiVaksin")}</div>
+            <div className="value">
+              74
+              <span className="delta-down" style={{ marginLeft: 8 }}>
+                <FaArrowDown /> 12.5%
               </span>
             </div>
-
+            <small style={{ color: "#7a857f", fontSize: 11.5, marginTop: 4 }}>
+              {t("dashboard.kpiVaksinHelp")}
+            </small>
           </div>
-
         </div>
-
       </div>
 
-      {/* SMALL STATS */}
-      <div className="small-stats">
-
-        <div className="small-card">
-
-          <div className="small-top">
-            <FaWallet />
-            <span>Last 30 days</span>
+      {/* 3 CARDS – stat klinik */}
+      <div className="account-grid">
+        <div className="account-card">
+          <div className="account-head">
+            <div className="title">
+              <FaPaw /> {t("dashboard.cardPasienAktif")}
+            </div>
+            <small>{t("common.last30")}</small>
           </div>
-
-          <h3>Business Account</h3>
-          <h2>Rp 8.672.000</h2>
-
-          <p className="positive">
-            +16%
-          </p>
-
+          <div className="account-value">
+            148
+            <span className="delta-up">
+              <FaArrowUp /> 16.0%
+            </span>
+          </div>
+          <div className="account-prev">{t("common.vsLastPeriod")}: 128</div>
         </div>
 
-        <div className="small-card">
-
-          <div className="small-top">
-            <FaPiggyBank />
-            <span>Last 30 days</span>
+        <div className="account-card">
+          <div className="account-head">
+            <div className="title">
+              <FaProcedures /> {t("dashboard.cardOperasi")}
+            </div>
+            <small>{t("common.last30")}</small>
           </div>
-
-          <h3>Total Saving</h3>
-          <h2>Rp 3.765.000</h2>
-
-          <p className="negative">
-            -8%
-          </p>
-
+          <div className="account-value">
+            36
+            <span className="delta-down">
+              <FaArrowDown /> 8.2%
+            </span>
+          </div>
+          <div className="account-prev">{t("common.vsLastPeriod")}: 39</div>
         </div>
 
-        <div className="small-card">
-
-          <div className="small-top">
-            <FaFileInvoiceDollar />
-            <span>Last 30 days</span>
+        <div className="account-card">
+          <div className="account-head">
+            <div className="title">
+              <FaSyringe /> {t("dashboard.cardVaksinLengkap")}
+            </div>
+            <small>{t("common.last30")}</small>
           </div>
-
-          <h3>Tax Reserve</h3>
-          <h2>Rp 14.376.000</h2>
-
-          <p className="positive">
-            +35%
-          </p>
-
+          <div className="account-value">
+            92
+            <span className="delta-up">
+              <FaArrowUp /> 35.2%
+            </span>
+          </div>
+          <div className="account-prev">{t("common.vsLastPeriod")}: 68</div>
         </div>
-
       </div>
 
-      {/* BOTTOM GRID */}
-      <div className="bottom-grid">
-
-        {/* ACTIVITY */}
+      {/* RECENT ACTIVITY + CARD */}
+      <div className="activity-row">
         <div className="activity-card">
+          <div className="card-head">
+            <h3>
+              <FaHeartbeat /> {t("dashboard.activity")}
+            </h3>
 
-          <div className="activity-header">
-            <h3>Recent Activity</h3>
+            <div className="activity-tools">
+              <button className="tool-btn">
+                <FaSlidersH /> {t("common.filter")}
+              </button>
+              <button className="tool-btn">
+                <FaSortAmountDown /> {t("common.sort")}
+              </button>
+              <button className="tool-btn" aria-label="More">
+                <FaEllipsisH />
+              </button>
+            </div>
           </div>
 
-          <table className="activity-table">
-
+          <table>
             <thead>
               <tr>
-                <th>Type</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Method</th>
+                <th>{t("dashboard.tableType")}</th>
+                <th>{t("dashboard.tableLayanan")}</th>
+                <th>{t("dashboard.tableStatus")}</th>
+                <th>{t("dashboard.tableDokter")}</th>
               </tr>
             </thead>
-
             <tbody>
-
-              <tr>
-                <td>
-                  Theo Lawrence
-                </td>
-
-                <td>
-                  Rp 500.000
-                </td>
-
-                <td>
-                  <span className="success-pill">
-                    Success
-                  </span>
-                </td>
-
-                <td>
-                  Credit Card
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  Amy March
-                </td>
-
-                <td>
-                  Rp 250.000
-                </td>
-
-                <td>
-                  <span className="pending-pill">
-                    Pending
-                  </span>
-                </td>
-
-                <td>
-                  Transfer
-                </td>
-              </tr>
-
+              {activities.map((a) => (
+                <tr key={a.id}>
+                  <td>
+                    <div className="act-type">
+                      <div className={`act-icon ${a.type}`}>{a.icon}</div>
+                      <div>
+                        <span className="name">{a.name}</span>
+                        <span className="sub">{a.sub}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <b style={{ fontSize: 13 }}>{a.service}</b>
+                      <small style={{ display: "block", color: "#7a857f", fontSize: 11 }}>
+                        {a.serviceSub}
+                      </small>
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`pill ${a.pillVariant}`}>{a.status}</span>
+                  </td>
+                  <td>
+                    <div>
+                      <b style={{ fontSize: 13 }}>{a.doctor}</b>
+                      <small style={{ display: "block", color: "#7a857f", fontSize: 11 }}>
+                        {a.doctorSub}
+                      </small>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
-
           </table>
-
         </div>
 
-        {/* CARD */}
-        <div className="mycard-card">
-
-          <div className="mycard-top">
-
-            <h3>My Cards</h3>
-
-            <button>
-              See All
+        <div className="card-preview-card">
+          <div className="card-head">
+            <h3>{t("dashboard.myCard")}</h3>
+            <button className="see-all">
+              {t("common.seeAll")} <FaArrowRight />
             </button>
-
           </div>
 
-          <div className="visa-card">
-
-            <div className="visa-header">
-              <span>VISA</span>
-              <span>2104</span>
-            </div>
-
-            <h2>Rp 4.540.000</h2>
-
+          <div className="virtual-card">
+            <div className="vc-brand">VetCare</div>
+            <div className="vc-num">CLN • 2026 • 2104</div>
+            <div className="vc-amount">Dr. Dika Pratama</div>
+            <small style={{ display: "block", marginTop: 6, opacity: 0.85, fontSize: 11.5 }}>
+              {t("dashboard.memberSince")} 2018 · {t("dashboard.memberId")}: VC-001
+            </small>
           </div>
-
         </div>
-
       </div>
-
     </div>
   );
-};
-
-export default Dashboard;
+}

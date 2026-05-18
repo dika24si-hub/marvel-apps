@@ -1,86 +1,87 @@
 import { Outlet } from "react-router-dom";
 import {
   FaPaw,
-  FaHeartbeat,
   FaStethoscope,
   FaUserMd,
+  FaHeartbeat,
   FaShieldAlt,
 } from "react-icons/fa";
 import LanguageSwitcher from "../components/LanguageSwitcher";
-import { useLang } from "../i18n/LanguageContext";
 
 export default function AuthLayout() {
-  const { t } = useLang();
-
   return (
-    <div className="auth-layout">
-      {/* LEFT – Branding Panel */}
-      <div className="auth-branding">
-        <div className="auth-brand-top">
-          <div className="brand-icon">
+    <div className="auth-pro">
+      {/* LEFT — Branding Panel (hidden di mobile) */}
+      <aside className="auth-pro-side">
+        <div className="auth-pro-brand">
+          <div className="auth-pro-logo">
             <FaPaw />
           </div>
-          <h2>{t("app.name")}</h2>
+          <h2>VetCare</h2>
         </div>
 
-        <div className="auth-brand-body">
+        <div className="auth-pro-hero">
           <h1>
-            {t("login.brandingTitle")} <span>{t("login.brandingHighlight")}</span>.
+            Kelola klinik hewan Anda dengan
+            <br />
+            <span>lebih profesional</span>.
           </h1>
-
-          <p>{t("login.brandingSubtitle")}</p>
-
-          <ul className="auth-features">
-            <li>
-              <span className="feat-icon blue">
-                <FaStethoscope />
-              </span>
-              <div>
-                <b>{t("login.feat1Title")}</b>
-                <small>{t("login.feat1Sub")}</small>
-              </div>
-            </li>
-            <li>
-              <span className="feat-icon teal">
-                <FaUserMd />
-              </span>
-              <div>
-                <b>{t("login.feat2Title")}</b>
-                <small>{t("login.feat2Sub")}</small>
-              </div>
-            </li>
-            <li>
-              <span className="feat-icon orange">
-                <FaHeartbeat />
-              </span>
-              <div>
-                <b>{t("login.feat3Title")}</b>
-                <small>{t("login.feat3Sub")}</small>
-              </div>
-            </li>
-          </ul>
-
-          <div className="auth-footer-info">
-            <FaShieldAlt />
-            {t("login.secure")}
-          </div>
+          <p>
+            Platform manajemen terintegrasi untuk klinik dokter hewan — mulai
+            dari data hewan, jadwal periksa, rekam medis, hingga pembayaran.
+          </p>
         </div>
 
-        <div className="blob blob-1" />
-        <div className="blob blob-2" />
-      </div>
+        <ul className="auth-pro-features">
+          <li>
+            <span className="feat-ic blue">
+              <FaStethoscope />
+            </span>
+            <div>
+              <b>Pemeriksaan Terpadu</b>
+              <small>Catatan medis langsung tersimpan rapi.</small>
+            </div>
+          </li>
+          <li>
+            <span className="feat-ic teal">
+              <FaUserMd />
+            </span>
+            <div>
+              <b>Manajemen Dokter</b>
+              <small>Atur jadwal & spesialisasi dengan mudah.</small>
+            </div>
+          </li>
+          <li>
+            <span className="feat-ic orange">
+              <FaHeartbeat />
+            </span>
+            <div>
+              <b>Laporan Real-time</b>
+              <small>Pantau performa klinik setiap saat.</small>
+            </div>
+          </li>
+        </ul>
 
-      {/* RIGHT – Form */}
-      <div className="auth-form-wrap">
-        {/* Language switcher di pojok kanan atas */}
-        <div className="auth-lang-wrap">
+        <div className="auth-pro-secure">
+          <FaShieldAlt />
+          Data klinik Anda terenkripsi & aman.
+        </div>
+
+        {/* Decorative shapes */}
+        <span className="auth-blob b1" />
+        <span className="auth-blob b2" />
+      </aside>
+
+      {/* RIGHT — Form */}
+      <main className="auth-pro-main">
+        <div className="auth-pro-topbar">
           <LanguageSwitcher />
         </div>
 
-        <div className="auth-card">
+        <div className="auth-pro-card">
           <Outlet />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

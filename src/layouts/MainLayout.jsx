@@ -1,37 +1,26 @@
+import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import { Outlet } from "react-router-dom";
+import { Footer } from "../components/ui";
 
-const MainLayout = () => {
+export default function MainLayout() {
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        background: "#f4f7fb",
-      }}
-    >
+    <div className="main-layout">
       <Sidebar />
 
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+      <div className="main-content">
         <Navbar />
 
-        <main
-          style={{
-            padding: "30px",
-          }}
-        >
+        <main className="page-content">
           <Outlet />
         </main>
+
+        {/* 🟢 Komponen #12 Footer — muncul di semua halaman dalam Main layout */}
+        <Footer
+          left="© 2026 VetCare Animal Clinic"
+          right={<span>v1.0.0 • Sistem Manajemen Klinik Hewan</span>}
+        />
       </div>
     </div>
   );
-};
-
-export default MainLayout;
+}

@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 import {
   FaPlus,
   FaEye,
-  FaSearch,
-  FaFilter,
   FaUserMd,
   FaStar,
   FaStethoscope,
@@ -13,539 +11,191 @@ import {
 } from "react-icons/fa";
 
 import { useLang } from "../i18n/LanguageContext";
+import { usePageSearch } from "../context/SearchContext";
 
-// DATA DOKTER
+import {
+  PageHeader,
+  Button,
+  StatCard,
+  FilterChips,
+  Card,
+  Table,
+  Badge,
+  Avatar,
+  Tag,
+  EmptyState,
+  Pagination,
+} from "../components/ui";
+
 const DATA = [
-  {
-    no: 1,
-    nama: "Dr. Dika Pratama",
-    spesialisKey: "bedah",
-    pendidikan: "Universitas Gadjah Mada",
-    pengalaman: 8,
-    rating: 4.9,
-    jadwalKey: "senJum",
-    status: "Aktif",
-    pasien: 124,
-  },
-
-  {
-    no: 2,
-    nama: "Dr. Clara Wijayanti",
-    spesialisKey: "grooming",
-    pendidikan: "Institut Pertanian Bogor",
-    pengalaman: 5,
-    rating: 4.7,
-    jadwalKey: "senKamSab",
-    status: "Aktif",
-    pasien: 86,
-  },
-
-  {
-    no: 3,
-    nama: "Dr. Felix Hartanto",
-    spesialisKey: "bedahTrauma",
-    pendidikan: "Universitas Airlangga",
-    pengalaman: 10,
-    rating: 5.0,
-    jadwalKey: "selJum",
-    status: "Aktif",
-    pasien: 210,
-  },
-
-  {
-    no: 4,
-    nama: "Dr. Kiran Nugraha",
-    spesialisKey: "vaksin",
-    pendidikan: "Universitas Brawijaya",
-    pengalaman: 6,
-    rating: 4.8,
-    jadwalKey: "rabMin",
-    status: "Aktif",
-    pasien: 97,
-  },
-
-  {
-    no: 5,
-    nama: "Dr. Joseph Lim",
-    spesialisKey: "internal",
-    pendidikan: "Universitas Indonesia",
-    pengalaman: 12,
-    rating: 4.9,
-    jadwalKey: "senKam",
-    status: "Cuti",
-    pasien: 180,
-  },
+  { no: 1, nama: "Dr. Dika Pratama",     spesialisKey: "bedah",        pendidikan: "Universitas Gadjah Mada",  pengalaman: 8,  rating: 4.9, jadwalKey: "senJum",     status: "Aktif", pasien: 124 },
+  { no: 2, nama: "Dr. Clara Wijayanti",  spesialisKey: "grooming",     pendidikan: "Institut Pertanian Bogor", pengalaman: 5,  rating: 4.7, jadwalKey: "senKamSab",  status: "Aktif", pasien: 86  },
+  { no: 3, nama: "Dr. Felix Hartanto",   spesialisKey: "bedahTrauma",  pendidikan: "Universitas Airlangga",    pengalaman: 10, rating: 5.0, jadwalKey: "selJum",     status: "Aktif", pasien: 210 },
+  { no: 4, nama: "Dr. Kiran Nugraha",    spesialisKey: "vaksin",       pendidikan: "Universitas Brawijaya",    pengalaman: 6,  rating: 4.8, jadwalKey: "rabMin",     status: "Aktif", pasien: 97  },
+  { no: 5, nama: "Dr. Joseph Lim",       spesialisKey: "internal",     pendidikan: "Universitas Indonesia",    pengalaman: 12, rating: 4.9, jadwalKey: "senKam",     status: "Cuti",  pasien: 180 },
 ];
 
-// LABEL SPESIALIS
 const SPECIALIST = {
-  id: {
-    bedah: "Bedah Hewan",
-    grooming: "Perawatan & Grooming",
-    bedahTrauma: "Bedah & Trauma",
-    vaksin: "Vaksinasi & Imunologi",
-    internal: "Internal Medicine",
-  },
-
-  en: {
-    bedah: "Veterinary Surgery",
-    grooming: "Grooming & Wellness",
-    bedahTrauma: "Surgery & Trauma",
-    vaksin: "Vaccination & Immunology",
-    internal: "Internal Medicine",
-  },
+  id: { bedah: "Bedah Hewan", grooming: "Perawatan & Grooming", bedahTrauma: "Bedah & Trauma", vaksin: "Vaksinasi & Imunologi", internal: "Internal Medicine" },
+  en: { bedah: "Veterinary Surgery", grooming: "Grooming & Wellness", bedahTrauma: "Surgery & Trauma", vaksin: "Vaccination & Immunology", internal: "Internal Medicine" },
 };
 
-// LABEL JADWAL
 const SCHEDULE_LABEL = {
-  id: {
-    senJum: "Senin - Jumat",
-    senKamSab: "Senin, Kamis, Sabtu",
-    selJum: "Selasa - Jumat",
-    rabMin: "Rabu - Minggu",
-    senKam: "Senin - Kamis",
-  },
-
-  en: {
-    senJum: "Mon - Fri",
-    senKamSab: "Mon, Thu, Sat",
-    selJum: "Tue - Fri",
-    rabMin: "Wed - Sun",
-    senKam: "Mon - Thu",
-  },
+  id: { senJum: "Senin - Jumat", senKamSab: "Senin, Kamis, Sabtu", selJum: "Selasa - Jumat", rabMin: "Rabu - Minggu", senKam: "Senin - Kamis" },
+  en: { senJum: "Mon - Fri", senKamSab: "Mon, Thu, Sat", selJum: "Tue - Fri", rabMin: "Wed - Sun", senKam: "Mon - Thu" },
 };
 
-// WARNA STATUS
-const STATUS_COLOR = {
+const STATUS_VARIANT = {
   Aktif: "success",
   Cuti: "warning",
   Nonaktif: "danger",
 };
 
-// AVATAR
-const AVATAR_THEMES = [
-  "purple",
-  "teal",
-  "orange",
-  "blue",
-  "pink",
-];
-
-// INISIAL NAMA
-function initials(fullName) {
-  const parts = fullName.replace("Dr. ", "").split(" ");
-
-  return (
-    (parts[0]?.[0] ?? "") +
-    (parts[1]?.[0] ?? "")
-  );
-}
+const AVATAR_THEMES = ["purple", "teal", "orange", "blue", "pink"];
+const PER_PAGE = 3;
 
 export default function Dokter() {
   const { t, lang } = useLang();
+  const { matches } = usePageSearch(t("dokter.searchPlaceholder"));
+  const [filter, setFilter] = useState("Semua");
+  const [page, setPage] = useState(1);
 
-  const [keyword, setKeyword] =
-    useState("");
+  const specLabel = (key) => SPECIALIST[lang]?.[key] ?? key;
+  const scheduleLabel = (key) => SCHEDULE_LABEL[lang]?.[key] ?? key;
+  const expLabel = (n) => (lang === "en" ? `${n} years` : `${n} Tahun`);
 
-  const [filter, setFilter] =
-    useState("Semua");
-
-  // LABEL
-  const specLabel = (key) =>
-    SPECIALIST[lang]?.[key] ?? key;
-
-  const scheduleLabel = (key) =>
-    SCHEDULE_LABEL[lang]?.[key] ??
-    key;
-
-  const expLabel = (n) =>
-    lang === "en"
-      ? `${n} years`
-      : `${n} Tahun`;
-
-  // FILTER SPESIALIS
   const spesialisList = useMemo(() => {
-    const uniq = Array.from(
-      new Set(
-        DATA.map((d) => d.spesialisKey)
-      )
-    );
-
+    const uniq = Array.from(new Set(DATA.map((d) => d.spesialisKey)));
     return ["Semua", ...uniq];
   }, []);
 
-  // SEARCH + FILTER
   const filtered = useMemo(() => {
-    const q = keyword.toLowerCase();
-
     return DATA.filter((d) => {
-      const matchKey =
-        d.nama
-          .toLowerCase()
-          .includes(q) ||
-        specLabel(d.spesialisKey)
-          .toLowerCase()
-          .includes(q) ||
-        d.pendidikan
-          .toLowerCase()
-          .includes(q);
-
-      const matchFilter =
-        filter === "Semua" ||
-        d.spesialisKey === filter;
-
+      const matchKey = matches(d.nama, specLabel(d.spesialisKey), d.pendidikan);
+      const matchFilter = filter === "Semua" || d.spesialisKey === filter;
       return matchKey && matchFilter;
     });
-  }, [keyword, filter, lang]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matches, filter, lang]);
 
-  // STATS
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
   const stats = useMemo(
     () => ({
       total: DATA.length,
-
-      aktif: DATA.filter(
-        (d) => d.status === "Aktif"
-      ).length,
-
-      cuti: DATA.filter(
-        (d) => d.status === "Cuti"
-      ).length,
-
-      avgRating: (
-        DATA.reduce(
-          (a, b) => a + b.rating,
-          0
-        ) / DATA.length
-      ).toFixed(1),
+      aktif: DATA.filter((d) => d.status === "Aktif").length,
+      cuti: DATA.filter((d) => d.status === "Cuti").length,
+      avgRating: (DATA.reduce((a, b) => a + b.rating, 0) / DATA.length).toFixed(1),
     }),
     []
   );
 
   return (
     <div className="dokter-page">
+      <PageHeader
+        title={t("dokter.title")}
+        subtitle={t("dokter.breadcrumb")}
+        actions={
+          <Button variant="primary" leftIcon={<FaPlus />}>
+            {t("dokter.addBtn")}
+          </Button>
+        }
+      />
 
-      {/* HEADER */}
-      <div className="page-header">
-
-        <div>
-          <h1>{t("dokter.title")}</h1>
-
-          <p>
-            {t("dokter.breadcrumb")}
-          </p>
-        </div>
-
-        <button className="add-button">
-          <FaPlus />
-          {t("dokter.addBtn")}
-        </button>
-
+      <div className="mini-stats" style={{ marginTop: 14 }}>
+        <StatCard icon={<FaUserMd />}      color="primary" label={t("dokter.totalDokter")}  value={stats.total} />
+        <StatCard icon={<FaCheckCircle />} color="success" label={t("dokter.sedangAktif")}  value={stats.aktif} />
+        <StatCard icon={<FaClock />}       color="warning" label={t("dokter.sedangCuti")}   value={stats.cuti} />
+        <StatCard icon={<FaStar />}        color="info"    label={t("dokter.avgRating")}    value={stats.avgRating} />
       </div>
 
-      {/* STATS */}
-      <div className="mini-stats">
-
-        <div className="mini-stat">
-
-          <div className="mini-stat-icon primary">
-            <FaUserMd />
-          </div>
-
-          <div>
-            <p>
-              {t("dokter.totalDokter")}
-            </p>
-
-            <h3>{stats.total}</h3>
-          </div>
-
-        </div>
-
-        <div className="mini-stat">
-
-          <div className="mini-stat-icon success">
-            <FaCheckCircle />
-          </div>
-
-          <div>
-            <p>
-              {t("dokter.sedangAktif")}
-            </p>
-
-            <h3>{stats.aktif}</h3>
-          </div>
-
-        </div>
-
-        <div className="mini-stat">
-
-          <div className="mini-stat-icon warning">
-            <FaClock />
-          </div>
-
-          <div>
-            <p>
-              {t("dokter.sedangCuti")}
-            </p>
-
-            <h3>{stats.cuti}</h3>
-          </div>
-
-        </div>
-
-        <div className="mini-stat">
-
-          <div className="mini-stat-icon info">
-            <FaStar />
-          </div>
-
-          <div>
-            <p>
-              {t("dokter.avgRating")}
-            </p>
-
-            <h3>{stats.avgRating}</h3>
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* TOOLBAR */}
-      <div className="toolbar">
-
-        {/* SEARCH */}
-        <div className="toolbar-search">
-
-          <FaSearch />
-
-          <input
-            type="text"
-            placeholder={t(
-              "dokter.searchPlaceholder"
-            )}
-            value={keyword}
-            onChange={(e) =>
-              setKeyword(
-                e.target.value
-              )
-            }
-          />
-
-        </div>
-
-        {/* FILTER */}
-        <div className="filter-chips">
-
-          <FaFilter />
-
-          {spesialisList.map((f) => (
-
-            <button
-              key={f}
-              className={`chip ${
-                filter === f
-                  ? "active"
-                  : ""
-              }`}
-              onClick={() =>
-                setFilter(f)
-              }
-            >
-              {f === "Semua"
-                ? t("common.all")
-                : specLabel(f)}
-            </button>
-
-          ))}
-
-        </div>
-
-      </div>
-
-      {/* TABLE */}
-      <div className="table-card">
-
-        <div className="card-header">
-
-          <h3>
-            {t("dokter.daftarDokter")}
-          </h3>
-
-          <span>
-            {t("common.showing")}{" "}
-            {filtered.length}{" "}
-            {t("common.data")}
-          </span>
-
-        </div>
-
-        <div
-          style={{
-            overflowX: "auto",
+      <div className="toolbar toolbar-filter-only" style={{ marginTop: 14 }}>
+        <FilterChips
+          label="Filter"
+          value={filter}
+          onChange={(k) => {
+            setFilter(k);
+            setPage(1);
           }}
-        >
-
-          <table className="pretty-table">
-
-            <thead>
-
-              <tr>
-                <th>No</th>
-                <th>Doctor</th>
-                <th>Speciality</th>
-                <th>Education</th>
-                <th>Experience</th>
-                <th>Rating</th>
-                <th>Schedule</th>
-                <th>Status</th>
-                <th
-                  style={{
-                    textAlign: "right",
-                  }}
-                >
-                  Action
-                </th>
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              {filtered.map(
-                (item, idx) => (
-
-                  <tr key={item.no}>
-
-                    <td>
-                      #
-                      {String(
-                        item.no
-                      ).padStart(2, "0")}
-                    </td>
-
-                    <td>
-
-                      <div className="pet-cell">
-
-                        <div
-                          className={`doctor-thumb ${
-                            AVATAR_THEMES[
-                              idx %
-                                AVATAR_THEMES.length
-                            ]
-                          }`}
-                        >
-                          {initials(
-                            item.nama
-                          )}
-                        </div>
-
-                        <div>
-                          <b>
-                            {item.nama}
-                          </b>
-
-                          <small>
-                            ID-DR
-                            {String(
-                              item.no
-                            ).padStart(
-                              3,
-                              "0"
-                            )}
-                          </small>
-                        </div>
-
-                      </div>
-
-                    </td>
-
-                    <td>
-
-                      <span className="spec-tag">
-
-                        <FaStethoscope />
-
-                        {specLabel(
-                          item.spesialisKey
-                        )}
-
-                      </span>
-
-                    </td>
-
-                    <td>
-                      {item.pendidikan}
-                    </td>
-
-                    <td>
-                      {expLabel(
-                        item.pengalaman
-                      )}
-                    </td>
-
-                    <td>
-
-                      <span className="rating">
-
-                        <FaStar />
-
-                        {item.rating}
-
-                      </span>
-
-                    </td>
-
-                    <td>
-                      {scheduleLabel(
-                        item.jadwalKey
-                      )}
-                    </td>
-
-                    <td>
-
-                      <span
-                        className={`status-pill ${
-                          STATUS_COLOR[
-                            item.status
-                          ]
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-
-                    </td>
-
-                    <td
-                      style={{
-                        textAlign:
-                          "right",
-                      }}
-                    >
-
-                      <Link
-                        to={`/dokter/${item.no}`}
-                        className="detail-btn"
-                      >
-                        <FaEye />
-                        Detail
-                      </Link>
-
-                    </td>
-
-                  </tr>
-                )
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
+          options={spesialisList.map((f) => ({
+            key: f,
+            label: f === "Semua" ? t("common.all") : specLabel(f),
+          }))}
+        />
       </div>
 
+      <Card
+        title={t("dokter.daftarDokter")}
+        subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+      >
+        <Table
+          rowKey="no"
+          data={pageRows}
+          empty={<EmptyState title={t("common.noMatch")} />}
+          columns={[
+            { key: "no", header: t("dokter.cols.no"),
+              render: (r) => <span className="muted">#{String(r.no).padStart(2, "0")}</span> },
+            { key: "nama", header: t("dokter.cols.dokter"),
+              render: (r, i) => (
+                <div className="pet-cell">
+                  <Avatar
+                    name={r.nama}
+                    theme={AVATAR_THEMES[i % AVATAR_THEMES.length]}
+                    size={40}
+                  />
+                  <div>
+                    <b>{r.nama}</b>
+                    <small>ID-DR{String(r.no).padStart(3, "0")}</small>
+                  </div>
+                </div>
+              ),
+            },
+            { key: "spesialis", header: t("dokter.cols.spesialis"),
+              render: (r) => (
+                <Tag color="brand" icon={<FaStethoscope />}>
+                  {specLabel(r.spesialisKey)}
+                </Tag>
+              ),
+            },
+            { key: "pendidikan", header: t("dokter.cols.pendidikan"),
+              render: (r) => <span className="muted">{r.pendidikan}</span> },
+            { key: "pengalaman", header: t("dokter.cols.pengalaman"),
+              render: (r) => expLabel(r.pengalaman) },
+            { key: "rating", header: t("dokter.cols.rating"),
+              render: (r) => (
+                <Tag color="amber" icon={<FaStar />}>
+                  {r.rating.toFixed(1)}
+                </Tag>
+              ),
+            },
+            { key: "jadwal", header: t("dokter.cols.jadwal"),
+              render: (r) => scheduleLabel(r.jadwalKey) },
+            { key: "status", header: t("dokter.cols.status"),
+              render: (r) => (
+                <Badge variant={STATUS_VARIANT[r.status]} dot>
+                  {t(`status.${r.status}`)}
+                </Badge>
+              ),
+            },
+            { key: "act", header: t("dokter.cols.aksi"), align: "right",
+              render: (r) => (
+                <Link to={`/dokter/${r.no}`}>
+                  <Button variant="ghost" size="sm" leftIcon={<FaEye />}>
+                    {t("common.detail")}
+                  </Button>
+                </Link>
+              ),
+            },
+          ]}
+        />
+
+        {filtered.length > PER_PAGE && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   FaPlus,
-  FaSearch,
-  FaFilter,
   FaNotesMedical,
   FaSyringe,
   FaStethoscope,
@@ -11,47 +9,43 @@ import {
 } from "react-icons/fa";
 import { useLang } from "../i18n/LanguageContext";
 import { formatDate } from "../i18n/format";
+import { usePageSearch } from "../context/SearchContext";
+
+import {
+  PageHeader,
+  Button,
+  StatCard,
+  FilterChips,
+  Card,
+  Table,
+  Badge,
+  Tag,
+  EmptyState,
+  Pagination,
+} from "../components/ui";
 
 const DATA = [
-  { no: 1, kode: "RM-00421", hewan: "Milo",  jenis: "Kucing", pemilik: "Budi Santoso",  dokter: "Dr. Dika Pratama",   tanggal: "10 Mei 2026", diagnosaKey: "demamRingan",   kategori: "Konsultasi", tindakanKey: "antipiretik",   obat: "Paracetamol vet"     },
-  { no: 2, kode: "RM-00422", hewan: "Rocky", jenis: "Anjing", pemilik: "Andi Wijaya",   dokter: "Dr. Felix Hartanto", tanggal: "05 Mei 2026", diagnosaKey: "patahTulang",   kategori: "Operasi",    tindakanKey: "fiksasi",       obat: "Antibiotik + analgesik" },
-  { no: 3, kode: "RM-00423", hewan: "Luna",  jenis: "Kucing", pemilik: "Sari Indah",    dokter: "Dr. Kiran Nugraha",  tanggal: "01 Mei 2026", diagnosaKey: "vaksinRutin",   kategori: "Vaksin",     tindakanKey: "vaksinTricat",  obat: "Tricat vaccine"      },
-  { no: 4, kode: "RM-00424", hewan: "Bruno", jenis: "Anjing", pemilik: "Rizky Pratama", dokter: "Dr. Clara Wijayanti",tanggal: "28 Apr 2026", diagnosaKey: "infeksiKulit",  kategori: "Konsultasi", tindakanKey: "salepTopikal",  obat: "Salep antijamur"     },
-  { no: 5, kode: "RM-00425", hewan: "Coco",  jenis: "Kucing", pemilik: "Dewi Lestari",  dokter: "Dr. Dika Pratama",   tanggal: "02 Mei 2026", diagnosaKey: "checkupRutin",  kategori: "Konsultasi", tindakanKey: "pemeriksaanUmum", obat: "-"                 },
+  { no: 1, kode: "RM-00421", hewan: "Milo",  jenis: "Kucing", pemilik: "Budi Santoso",  dokter: "Dr. Dika Pratama",   tanggal: "10 Mei 2026", diagnosaKey: "demamRingan",   kategori: "Konsultasi", tindakanKey: "antipiretik",     obat: "Paracetamol vet"        },
+  { no: 2, kode: "RM-00422", hewan: "Rocky", jenis: "Anjing", pemilik: "Andi Wijaya",   dokter: "Dr. Felix Hartanto", tanggal: "05 Mei 2026", diagnosaKey: "patahTulang",   kategori: "Operasi",    tindakanKey: "fiksasi",         obat: "Antibiotik + analgesik" },
+  { no: 3, kode: "RM-00423", hewan: "Luna",  jenis: "Kucing", pemilik: "Sari Indah",    dokter: "Dr. Kiran Nugraha",  tanggal: "01 Mei 2026", diagnosaKey: "vaksinRutin",   kategori: "Vaksin",     tindakanKey: "vaksinTricat",    obat: "Tricat vaccine"         },
+  { no: 4, kode: "RM-00424", hewan: "Bruno", jenis: "Anjing", pemilik: "Rizky Pratama", dokter: "Dr. Clara Wijayanti",tanggal: "28 Apr 2026", diagnosaKey: "infeksiKulit",  kategori: "Konsultasi", tindakanKey: "salepTopikal",    obat: "Salep antijamur"        },
+  { no: 5, kode: "RM-00425", hewan: "Coco",  jenis: "Kucing", pemilik: "Dewi Lestari",  dokter: "Dr. Dika Pratama",   tanggal: "02 Mei 2026", diagnosaKey: "checkupRutin",  kategori: "Konsultasi", tindakanKey: "pemeriksaanUmum", obat: "-"                       },
 ];
 
 const DIAGNOSA = {
-  id: {
-    demamRingan: "Demam Ringan",
-    patahTulang: "Patah Tulang Minor",
-    vaksinRutin: "Vaksinasi Rutin",
-    infeksiKulit: "Infeksi Kulit",
-    checkupRutin: "Checkup Rutin",
-  },
-  en: {
-    demamRingan: "Mild Fever",
-    patahTulang: "Minor Fracture",
-    vaksinRutin: "Routine Vaccination",
-    infeksiKulit: "Skin Infection",
-    checkupRutin: "Routine Checkup",
-  },
+  id: { demamRingan: "Demam Ringan", patahTulang: "Patah Tulang Minor", vaksinRutin: "Vaksinasi Rutin", infeksiKulit: "Infeksi Kulit", checkupRutin: "Checkup Rutin" },
+  en: { demamRingan: "Mild Fever", patahTulang: "Minor Fracture", vaksinRutin: "Routine Vaccination", infeksiKulit: "Skin Infection", checkupRutin: "Routine Checkup" },
 };
 
 const TINDAKAN = {
-  id: {
-    antipiretik: "Pemberian antipiretik",
-    fiksasi: "Operasi fiksasi ringan",
-    vaksinTricat: "Vaksin Tricat",
-    salepTopikal: "Pemberian salep topikal",
-    pemeriksaanUmum: "Pemeriksaan umum",
-  },
-  en: {
-    antipiretik: "Antipyretic administration",
-    fiksasi: "Minor fixation surgery",
-    vaksinTricat: "Tricat vaccination",
-    salepTopikal: "Topical ointment",
-    pemeriksaanUmum: "General examination",
-  },
+  id: { antipiretik: "Pemberian antipiretik", fiksasi: "Operasi fiksasi ringan", vaksinTricat: "Vaksin Tricat", salepTopikal: "Pemberian salep topikal", pemeriksaanUmum: "Pemeriksaan umum" },
+  en: { antipiretik: "Antipyretic administration", fiksasi: "Minor fixation surgery", vaksinTricat: "Tricat vaccination", salepTopikal: "Topical ointment", pemeriksaanUmum: "General examination" },
+};
+
+const KATEGORI_VARIANT = {
+  Konsultasi: "info",
+  Vaksin: "success",
+  Operasi: "warning",
 };
 
 const KATEGORI_ICON = {
@@ -60,34 +54,34 @@ const KATEGORI_ICON = {
   Operasi: <FaProcedures />,
 };
 
-const KATEGORI_COLOR = {
-  Konsultasi: "info",
-  Vaksin: "success",
-  Operasi: "warning",
-};
+const PER_PAGE = 3;
 
 export default function RekamMedis() {
   const { t, lang } = useLang();
-  const [keyword, setKeyword] = useState("");
+  const { matches } = usePageSearch(t("rekamMedis.searchPlaceholder"));
   const [filter, setFilter] = useState("Semua");
+  const [page, setPage] = useState(1);
 
   const diagLabel = (key) => DIAGNOSA[lang]?.[key] ?? key;
   const tindakanLabel = (key) => TINDAKAN[lang]?.[key] ?? key;
 
   const filtered = useMemo(() => {
-    const q = keyword.toLowerCase();
     return DATA.filter((d) => {
-      const matchKey =
-        d.hewan.toLowerCase().includes(q) ||
-        d.pemilik.toLowerCase().includes(q) ||
-        d.dokter.toLowerCase().includes(q) ||
-        diagLabel(d.diagnosaKey).toLowerCase().includes(q) ||
-        d.kode.toLowerCase().includes(q);
+      const matchKey = matches(
+        d.kode,
+        d.hewan,
+        d.pemilik,
+        d.dokter,
+        diagLabel(d.diagnosaKey)
+      );
       const matchFilter = filter === "Semua" || d.kategori === filter;
       return matchKey && matchFilter;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, filter, lang]);
+  }, [matches, filter, lang]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const stats = useMemo(
     () => ({
@@ -103,134 +97,94 @@ export default function RekamMedis() {
 
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <h1>{t("rekamMedis.title")}</h1>
-          <p>{t("rekamMedis.breadcrumb")}</p>
-        </div>
-        <button className="add-button">
-          <FaPlus /> {t("rekamMedis.addBtn")}
-        </button>
+      <PageHeader
+        title={t("rekamMedis.title")}
+        subtitle={t("rekamMedis.breadcrumb")}
+        actions={
+          <Button variant="primary" leftIcon={<FaPlus />}>
+            {t("rekamMedis.addBtn")}
+          </Button>
+        }
+      />
+
+      <div className="mini-stats" style={{ marginTop: 14 }}>
+        <StatCard icon={<FaNotesMedical />} color="primary" label={t("rekamMedis.totalRekam")}  value={stats.total} />
+        <StatCard icon={<FaStethoscope />}  color="info"    label={t("rekamMedis.konsultasi")}  value={stats.konsultasi} />
+        <StatCard icon={<FaSyringe />}      color="success" label={t("rekamMedis.vaksinasi")}   value={stats.vaksin} />
+        <StatCard icon={<FaProcedures />}   color="warning" label={t("rekamMedis.operasi")}     value={stats.operasi} />
       </div>
 
-      <div className="mini-stats">
-        <div className="mini-stat">
-          <div className="mini-stat-icon primary"><FaNotesMedical /></div>
-          <div><p>{t("rekamMedis.totalRekam")}</p><h3>{stats.total}</h3></div>
-        </div>
-        <div className="mini-stat">
-          <div className="mini-stat-icon info"><FaStethoscope /></div>
-          <div><p>{t("rekamMedis.konsultasi")}</p><h3>{stats.konsultasi}</h3></div>
-        </div>
-        <div className="mini-stat">
-          <div className="mini-stat-icon success"><FaSyringe /></div>
-          <div><p>{t("rekamMedis.vaksinasi")}</p><h3>{stats.vaksin}</h3></div>
-        </div>
-        <div className="mini-stat">
-          <div className="mini-stat-icon warning"><FaProcedures /></div>
-          <div><p>{t("rekamMedis.operasi")}</p><h3>{stats.operasi}</h3></div>
-        </div>
+      <div className="toolbar toolbar-filter-only" style={{ marginTop: 14 }}>
+        <FilterChips
+          label="Filter"
+          value={filter}
+          onChange={(k) => {
+            setFilter(k);
+            setPage(1);
+          }}
+          options={filterKeys.map((f) => ({
+            key: f,
+            label: f === "Semua" ? t("common.all") : t(`kategori.${f}`),
+          }))}
+        />
       </div>
 
-      <div className="toolbar">
-        <div className="toolbar-search">
-          <FaSearch />
-          <input
-            type="text"
-            placeholder={t("rekamMedis.searchPlaceholder")}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-        </div>
+      <Card
+        title={t("rekamMedis.riwayat")}
+        subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+      >
+        <Table
+          rowKey="no"
+          data={pageRows}
+          empty={<EmptyState title={t("common.noMatch")} />}
+          columns={[
+            { key: "kode", header: t("table.kode"),
+              render: (r) => <Tag color="blue">{r.kode}</Tag> },
+            { key: "hewan", header: t("table.hewan"),
+              render: (r) => (
+                <>
+                  <b>{r.hewan}</b>
+                  <small className="block muted">{t(`jenis.${r.jenis}`)}</small>
+                </>
+              ),
+            },
+            { key: "pemilik", header: t("table.pemilik") },
+            { key: "dokter", header: t("table.dokter") },
+            { key: "tanggal", header: t("table.tanggal"),
+              render: (r) => <span className="muted">{formatDate(r.tanggal, lang)}</span> },
+            { key: "diagnosa", header: t("table.diagnosa"),
+              render: (r) => <b>{diagLabel(r.diagnosaKey)}</b> },
+            { key: "kategori", header: t("table.kategori"),
+              render: (r) => (
+                <Badge variant={KATEGORI_VARIANT[r.kategori]} icon={KATEGORI_ICON[r.kategori]}>
+                  {t(`kategori.${r.kategori}`)}
+                </Badge>
+              ),
+            },
+            { key: "tindakanObat", header: t("table.tindakanObat"),
+              render: (r) => (
+                <>
+                  <b style={{ fontSize: 12 }}>{tindakanLabel(r.tindakanKey)}</b>
+                  <small className="block muted">{t("common.obat")}: {r.obat}</small>
+                </>
+              ),
+            },
+            { key: "act", header: t("table.berkas"), align: "right",
+              render: () => (
+                <Button variant="ghost" size="sm" leftIcon={<FaFilePdf />}>
+                  {t("common.pdf")}
+                </Button>
+              ),
+            },
+          ]}
+        />
 
-        <div className="filter-chips">
-          <FaFilter className="filter-icon" />
-          {filterKeys.map((f) => (
-            <button
-              key={f}
-              className={`chip ${filter === f ? "active" : ""}`}
-              onClick={() => setFilter(f)}
-            >
-              {f === "Semua" ? t("common.all") : t(`kategori.${f}`)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="table-card">
-        <div className="card-header">
-          <h3>{t("rekamMedis.riwayat")}</h3>
-          <span>
-            {t("common.showing")} {filtered.length} {t("common.data")}
-          </span>
-        </div>
-
-        <div style={{ overflowX: "auto" }}>
-          <table className="pretty-table">
-            <thead>
-              <tr>
-                <th>{t("table.kode")}</th>
-                <th>{t("table.hewan")}</th>
-                <th>{t("table.pemilik")}</th>
-                <th>{t("table.dokter")}</th>
-                <th>{t("table.tanggal")}</th>
-                <th>{t("table.diagnosa")}</th>
-                <th>{t("table.kategori")}</th>
-                <th>{t("table.tindakanObat")}</th>
-                <th style={{ textAlign: "right" }}>{t("table.berkas")}</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>
-                    {t("common.noMatch")}
-                  </td>
-                </tr>
-              )}
-
-              {filtered.map((item) => (
-                <tr key={item.no}>
-                  <td>
-                    <span className="code-tag">{item.kode}</span>
-                  </td>
-
-                  <td>
-                    <b>{item.hewan}</b>
-                    <small className="block muted">{t(`jenis.${item.jenis}`)}</small>
-                  </td>
-
-                  <td>{item.pemilik}</td>
-                  <td>{item.dokter}</td>
-                  <td className="muted">{formatDate(item.tanggal, lang)}</td>
-
-                  <td>
-                    <b>{diagLabel(item.diagnosaKey)}</b>
-                  </td>
-
-                  <td>
-                    <span className={`status-pill ${KATEGORI_COLOR[item.kategori]}`}>
-                      {KATEGORI_ICON[item.kategori]} {t(`kategori.${item.kategori}`)}
-                    </span>
-                  </td>
-
-                  <td>
-                    <b style={{ fontSize: 12 }}>{tindakanLabel(item.tindakanKey)}</b>
-                    <small className="block muted">{t("common.obat")}: {item.obat}</small>
-                  </td>
-
-                  <td style={{ textAlign: "right" }}>
-                    <button className="detail-btn">
-                      <FaFilePdf /> {t("common.pdf")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        {filtered.length > PER_PAGE && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
