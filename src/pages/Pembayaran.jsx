@@ -16,7 +16,6 @@ import {
   PageHeader,
   Button,
   StatCard,
-  FilterChips,
   Card,
   Table,
   Badge,
@@ -25,6 +24,7 @@ import {
   Pagination,
   Modal,
 } from "../components/ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/shadcn";
 
 const DATA = [
   { no: 1, invoice: "INV-20260510-001", hewan: "Milo",  pemilik: "Budi Santoso",  layananKey: "vaksinRabies",  tanggal: "10 Mei 2026", metodeKey: "transferBca", total: 250000,  status: "Lunas"      },
@@ -117,71 +117,76 @@ export default function Pembayaran() {
         <StatCard icon={<FaFileInvoice />}   color="info"    label={t("pembayaran.menungguBayar")}  value={stats.jumlahPending} />
       </div>
 
-      <div className="toolbar toolbar-filter-only" style={{ marginTop: 14 }}>
-        <FilterChips
-          label="Filter"
-          value={filter}
-          onChange={(k) => {
-            setFilter(k);
-            setPage(1);
-          }}
-          options={filterKeys.map((f) => ({
-            key: f,
-            label: f === "Semua" ? t("common.all") : t(`status.${f}`),
-          }))}
-        />
-      </div>
-
-      <Card
-        title={t("pembayaran.riwayat")}
-        subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+      {/* 🟢 Shadcn Tabs — navigasi status pembayaran */}
+      <Tabs
+        value={filter}
+        onValueChange={(k) => {
+          setFilter(k);
+          setPage(1);
+        }}
+        className="rekam-tabs"
       >
-        <Table
-          rowKey="no"
-          data={pageRows}
-          empty={<EmptyState title={t("common.noMatch")} />}
-          columns={[
-            { key: "invoice", header: t("table.invoice"),
-              render: (r) => <Tag color="blue">{r.invoice}</Tag> },
-            { key: "hewan", header: t("table.hewan"),
-              render: (r) => <b>{r.hewan}</b> },
-            { key: "pemilik", header: t("table.pemilik") },
-            { key: "layanan", header: t("table.layanan"),
-              render: (r) => <Tag color="brand">{layananLabel(r.layananKey)}</Tag> },
-            { key: "tanggal", header: t("table.tanggal"),
-              render: (r) => <span className="muted">{formatDate(r.tanggal, lang)}</span> },
-            { key: "metode", header: t("table.metode"),
-              render: (r) => metodeLabel(r.metodeKey) },
-            { key: "total", header: t("table.total"), align: "right",
-              render: (r) => <b className="amount">{formatCurrency(r.total, lang)}</b> },
-            { key: "status", header: t("table.status"),
-              render: (r) => (
-                <Badge variant={STATUS_VARIANT[r.status]} icon={STATUS_ICON[r.status]}>
-                  {t(`status.${r.status}`)}
-                </Badge>
-              ),
-            },
-            { key: "act", header: t("table.berkas"), align: "right",
-              render: (r) => (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  leftIcon={<FaFileInvoice />}
-                  onClick={() => setActiveInvoice(r)}
-                >
-                  {t("common.invoice")}
-                </Button>
-              ),
-            },
-          ]}
-        />
+        <TabsList>
+          {filterKeys.map((f) => (
+            <TabsTrigger key={f} value={f}>
+              {f === "Semua" ? t("common.all") : t(`status.${f}`)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-        {filtered.length > PER_PAGE && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-          </div>
-        )}
-      </Card>
+        <TabsContent value={filter}>
+          <Card
+            title={t("pembayaran.riwayat")}
+            subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+          >
+            <Table
+              rowKey="no"
+              data={pageRows}
+              empty={<EmptyState title={t("common.noMatch")} />}
+              columns={[
+                { key: "invoice", header: t("table.invoice"),
+                  render: (r) => <Tag color="blue">{r.invoice}</Tag> },
+                { key: "hewan", header: t("table.hewan"),
+                  render: (r) => <b>{r.hewan}</b> },
+                { key: "pemilik", header: t("table.pemilik") },
+                { key: "layanan", header: t("table.layanan"),
+                  render: (r) => <Tag color="brand">{layananLabel(r.layananKey)}</Tag> },
+                { key: "tanggal", header: t("table.tanggal"),
+                  render: (r) => <span className="muted">{formatDate(r.tanggal, lang)}</span> },
+                { key: "metode", header: t("table.metode"),
+                  render: (r) => metodeLabel(r.metodeKey) },
+                { key: "total", header: t("table.total"), align: "right",
+                  render: (r) => <b className="amount">{formatCurrency(r.total, lang)}</b> },
+                { key: "status", header: t("table.status"),
+                  render: (r) => (
+                    <Badge variant={STATUS_VARIANT[r.status]} icon={STATUS_ICON[r.status]}>
+                      {t(`status.${r.status}`)}
+                    </Badge>
+                  ),
+                },
+                { key: "act", header: t("table.berkas"), align: "right",
+                  render: (r) => (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      leftIcon={<FaFileInvoice />}
+                      onClick={() => setActiveInvoice(r)}
+                    >
+                      {t("common.invoice")}
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+
+            {filtered.length > PER_PAGE && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+                <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Modal
         open={!!activeInvoice}

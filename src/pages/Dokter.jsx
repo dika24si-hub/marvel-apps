@@ -17,7 +17,6 @@ import {
   PageHeader,
   Button,
   StatCard,
-  FilterChips,
   Card,
   Table,
   Badge,
@@ -26,6 +25,7 @@ import {
   EmptyState,
   Pagination,
 } from "../components/ui";
+import { Tooltip as ScTooltip, Tabs, TabsList, TabsTrigger, TabsContent } from "../components/shadcn";
 
 const DATA = [
   { no: 1, nama: "Dr. Dika Pratama",     spesialisKey: "bedah",        pendidikan: "Universitas Gadjah Mada",  pengalaman: 8,  rating: 4.9, jadwalKey: "senJum",     status: "Aktif", pasien: 124 },
@@ -110,92 +110,99 @@ export default function Dokter() {
         <StatCard icon={<FaStar />}        color="info"    label={t("dokter.avgRating")}    value={stats.avgRating} />
       </div>
 
-      <div className="toolbar toolbar-filter-only" style={{ marginTop: 14 }}>
-        <FilterChips
-          label="Filter"
-          value={filter}
-          onChange={(k) => {
-            setFilter(k);
-            setPage(1);
-          }}
-          options={spesialisList.map((f) => ({
-            key: f,
-            label: f === "Semua" ? t("common.all") : specLabel(f),
-          }))}
-        />
-      </div>
-
-      <Card
-        title={t("dokter.daftarDokter")}
-        subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+      {/* 🟢 Shadcn Tabs — navigasi spesialis dokter */}
+      <Tabs
+        value={filter}
+        onValueChange={(k) => {
+          setFilter(k);
+          setPage(1);
+        }}
+        className="rekam-tabs"
       >
-        <Table
-          rowKey="no"
-          data={pageRows}
-          empty={<EmptyState title={t("common.noMatch")} />}
-          columns={[
-            { key: "no", header: t("dokter.cols.no"),
-              render: (r) => <span className="muted">#{String(r.no).padStart(2, "0")}</span> },
-            { key: "nama", header: t("dokter.cols.dokter"),
-              render: (r, i) => (
-                <div className="pet-cell">
-                  <Avatar
-                    name={r.nama}
-                    theme={AVATAR_THEMES[i % AVATAR_THEMES.length]}
-                    size={40}
-                  />
-                  <div>
-                    <b>{r.nama}</b>
-                    <small>ID-DR{String(r.no).padStart(3, "0")}</small>
-                  </div>
-                </div>
-              ),
-            },
-            { key: "spesialis", header: t("dokter.cols.spesialis"),
-              render: (r) => (
-                <Tag color="brand" icon={<FaStethoscope />}>
-                  {specLabel(r.spesialisKey)}
-                </Tag>
-              ),
-            },
-            { key: "pendidikan", header: t("dokter.cols.pendidikan"),
-              render: (r) => <span className="muted">{r.pendidikan}</span> },
-            { key: "pengalaman", header: t("dokter.cols.pengalaman"),
-              render: (r) => expLabel(r.pengalaman) },
-            { key: "rating", header: t("dokter.cols.rating"),
-              render: (r) => (
-                <Tag color="amber" icon={<FaStar />}>
-                  {r.rating.toFixed(1)}
-                </Tag>
-              ),
-            },
-            { key: "jadwal", header: t("dokter.cols.jadwal"),
-              render: (r) => scheduleLabel(r.jadwalKey) },
-            { key: "status", header: t("dokter.cols.status"),
-              render: (r) => (
-                <Badge variant={STATUS_VARIANT[r.status]} dot>
-                  {t(`status.${r.status}`)}
-                </Badge>
-              ),
-            },
-            { key: "act", header: t("dokter.cols.aksi"), align: "right",
-              render: (r) => (
-                <Link to={`/dokter/${r.no}`}>
-                  <Button variant="ghost" size="sm" leftIcon={<FaEye />}>
-                    {t("common.detail")}
-                  </Button>
-                </Link>
-              ),
-            },
-          ]}
-        />
+        <TabsList>
+          {spesialisList.map((f) => (
+            <TabsTrigger key={f} value={f}>
+              {f === "Semua" ? t("common.all") : specLabel(f)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-        {filtered.length > PER_PAGE && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-          </div>
-        )}
-      </Card>
+        <TabsContent value={filter}>
+          <Card
+            title={t("dokter.daftarDokter")}
+            subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+          >
+            <Table
+              rowKey="no"
+              data={pageRows}
+              empty={<EmptyState title={t("common.noMatch")} />}
+              columns={[
+                { key: "no", header: t("dokter.cols.no"),
+                  render: (r) => <span className="muted">#{String(r.no).padStart(2, "0")}</span> },
+                { key: "nama", header: t("dokter.cols.dokter"),
+                  render: (r, i) => (
+                    <div className="pet-cell">
+                      <Avatar
+                        name={r.nama}
+                        theme={AVATAR_THEMES[i % AVATAR_THEMES.length]}
+                        size={40}
+                      />
+                      <div>
+                        <b>{r.nama}</b>
+                        <small>ID-DR{String(r.no).padStart(3, "0")}</small>
+                      </div>
+                    </div>
+                  ),
+                },
+                { key: "spesialis", header: t("dokter.cols.spesialis"),
+                  render: (r) => (
+                    <Tag color="brand" icon={<FaStethoscope />}>
+                      {specLabel(r.spesialisKey)}
+                    </Tag>
+                  ),
+                },
+                { key: "pendidikan", header: t("dokter.cols.pendidikan"),
+                  render: (r) => <span className="muted">{r.pendidikan}</span> },
+                { key: "pengalaman", header: t("dokter.cols.pengalaman"),
+                  render: (r) => expLabel(r.pengalaman) },
+                { key: "rating", header: t("dokter.cols.rating"),
+                  render: (r) => (
+                    <Tag color="amber" icon={<FaStar />}>
+                      {r.rating.toFixed(1)}
+                    </Tag>
+                  ),
+                },
+                { key: "jadwal", header: t("dokter.cols.jadwal"),
+                  render: (r) => scheduleLabel(r.jadwalKey) },
+                { key: "status", header: t("dokter.cols.status"),
+                  render: (r) => (
+                    <Badge variant={STATUS_VARIANT[r.status]} dot>
+                      {t(`status.${r.status}`)}
+                    </Badge>
+                  ),
+                },
+                { key: "act", header: t("dokter.cols.aksi"), align: "right",
+                  render: (r) => (
+                    <ScTooltip content={`Lihat profil ${r.nama}`} side="left">
+                      <Link to={`/dokter/${r.no}`}>
+                        <Button variant="ghost" size="sm" leftIcon={<FaEye />}>
+                          {t("common.detail")}
+                        </Button>
+                      </Link>
+                    </ScTooltip>
+                  ),
+                },
+              ]}
+            />
+
+            {filtered.length > PER_PAGE && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+                <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

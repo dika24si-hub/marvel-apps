@@ -15,7 +15,6 @@ import {
   PageHeader,
   Button,
   StatCard,
-  FilterChips,
   Card,
   Table,
   Badge,
@@ -23,6 +22,7 @@ import {
   EmptyState,
   Pagination,
 } from "../components/ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/shadcn";
 
 const DATA = [
   { no: 1, kode: "RM-00421", hewan: "Milo",  jenis: "Kucing", pemilik: "Budi Santoso",  dokter: "Dr. Dika Pratama",   tanggal: "10 Mei 2026", diagnosaKey: "demamRingan",   kategori: "Konsultasi", tindakanKey: "antipiretik",     obat: "Paracetamol vet"        },
@@ -93,8 +93,6 @@ export default function RekamMedis() {
     []
   );
 
-  const filterKeys = ["Semua", "Konsultasi", "Vaksin", "Operasi"];
-
   return (
     <div>
       <PageHeader
@@ -114,77 +112,87 @@ export default function RekamMedis() {
         <StatCard icon={<FaProcedures />}   color="warning" label={t("rekamMedis.operasi")}     value={stats.operasi} />
       </div>
 
-      <div className="toolbar toolbar-filter-only" style={{ marginTop: 14 }}>
-        <FilterChips
-          label="Filter"
-          value={filter}
-          onChange={(k) => {
-            setFilter(k);
-            setPage(1);
-          }}
-          options={filterKeys.map((f) => ({
-            key: f,
-            label: f === "Semua" ? t("common.all") : t(`kategori.${f}`),
-          }))}
-        />
-      </div>
-
-      <Card
-        title={t("rekamMedis.riwayat")}
-        subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+      {/* 🟢 Shadcn Tabs — navigasi kategori rekam medis */}
+      <Tabs
+        value={filter}
+        onValueChange={(k) => {
+          setFilter(k);
+          setPage(1);
+        }}
+        className="rekam-tabs"
       >
-        <Table
-          rowKey="no"
-          data={pageRows}
-          empty={<EmptyState title={t("common.noMatch")} />}
-          columns={[
-            { key: "kode", header: t("table.kode"),
-              render: (r) => <Tag color="blue">{r.kode}</Tag> },
-            { key: "hewan", header: t("table.hewan"),
-              render: (r) => (
-                <>
-                  <b>{r.hewan}</b>
-                  <small className="block muted">{t(`jenis.${r.jenis}`)}</small>
-                </>
-              ),
-            },
-            { key: "pemilik", header: t("table.pemilik") },
-            { key: "dokter", header: t("table.dokter") },
-            { key: "tanggal", header: t("table.tanggal"),
-              render: (r) => <span className="muted">{formatDate(r.tanggal, lang)}</span> },
-            { key: "diagnosa", header: t("table.diagnosa"),
-              render: (r) => <b>{diagLabel(r.diagnosaKey)}</b> },
-            { key: "kategori", header: t("table.kategori"),
-              render: (r) => (
-                <Badge variant={KATEGORI_VARIANT[r.kategori]} icon={KATEGORI_ICON[r.kategori]}>
-                  {t(`kategori.${r.kategori}`)}
-                </Badge>
-              ),
-            },
-            { key: "tindakanObat", header: t("table.tindakanObat"),
-              render: (r) => (
-                <>
-                  <b style={{ fontSize: 12 }}>{tindakanLabel(r.tindakanKey)}</b>
-                  <small className="block muted">{t("common.obat")}: {r.obat}</small>
-                </>
-              ),
-            },
-            { key: "act", header: t("table.berkas"), align: "right",
-              render: () => (
-                <Button variant="ghost" size="sm" leftIcon={<FaFilePdf />}>
-                  {t("common.pdf")}
-                </Button>
-              ),
-            },
-          ]}
-        />
+        <TabsList>
+          <TabsTrigger value="Semua">{t("common.all")}</TabsTrigger>
+          <TabsTrigger value="Konsultasi" icon={<FaStethoscope />}>
+            {t("kategori.Konsultasi")}
+          </TabsTrigger>
+          <TabsTrigger value="Vaksin" icon={<FaSyringe />}>
+            {t("kategori.Vaksin")}
+          </TabsTrigger>
+          <TabsTrigger value="Operasi" icon={<FaProcedures />}>
+            {t("kategori.Operasi")}
+          </TabsTrigger>
+        </TabsList>
 
-        {filtered.length > PER_PAGE && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-          </div>
-        )}
-      </Card>
+        <TabsContent value={filter}>
+          <Card
+            title={t("rekamMedis.riwayat")}
+            subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+          >
+            <Table
+              rowKey="no"
+              data={pageRows}
+              empty={<EmptyState title={t("common.noMatch")} />}
+              columns={[
+                { key: "kode", header: t("table.kode"),
+                  render: (r) => <Tag color="blue">{r.kode}</Tag> },
+                { key: "hewan", header: t("table.hewan"),
+                  render: (r) => (
+                    <>
+                      <b>{r.hewan}</b>
+                      <small className="block muted">{t(`jenis.${r.jenis}`)}</small>
+                    </>
+                  ),
+                },
+                { key: "pemilik", header: t("table.pemilik") },
+                { key: "dokter", header: t("table.dokter") },
+                { key: "tanggal", header: t("table.tanggal"),
+                  render: (r) => <span className="muted">{formatDate(r.tanggal, lang)}</span> },
+                { key: "diagnosa", header: t("table.diagnosa"),
+                  render: (r) => <b>{diagLabel(r.diagnosaKey)}</b> },
+                { key: "kategori", header: t("table.kategori"),
+                  render: (r) => (
+                    <Badge variant={KATEGORI_VARIANT[r.kategori]} icon={KATEGORI_ICON[r.kategori]}>
+                      {t(`kategori.${r.kategori}`)}
+                    </Badge>
+                  ),
+                },
+                { key: "tindakanObat", header: t("table.tindakanObat"),
+                  render: (r) => (
+                    <>
+                      <b style={{ fontSize: 12 }}>{tindakanLabel(r.tindakanKey)}</b>
+                      <small className="block muted">{t("common.obat")}: {r.obat}</small>
+                    </>
+                  ),
+                },
+                { key: "act", header: t("table.berkas"), align: "right",
+                  render: () => (
+                    <Button variant="ghost" size="sm" leftIcon={<FaFilePdf />}>
+                      {t("common.pdf")}
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+
+            {filtered.length > PER_PAGE && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+                <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

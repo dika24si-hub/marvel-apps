@@ -9,7 +9,6 @@ import Guards from "./guards";
 // Lazy hanya di level page
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const Hewan = lazy(() => import("../pages/Hewan"));
-const HewanDetail = lazy(() => import("../pages/HewanDetail"));
 const Dokter = lazy(() => import("../pages/Dokter"));
 const DokterDetail = lazy(() => import("../pages/DokterDetail"));
 const Jadwal = lazy(() => import("../pages/Jadwal"));
@@ -32,7 +31,6 @@ export default function AppRouter() {
           >
             <Route path="/" element={<Dashboard />} />
             <Route path="/hewan" element={<Hewan />} />
-            <Route path="/hewan/:id" element={<HewanDetail />} />
             <Route path="/dokter" element={<Dokter />} />
             <Route path="/dokter/:id" element={<DokterDetail />} />
             <Route path="/jadwal" element={<Jadwal />} />

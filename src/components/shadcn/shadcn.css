@@ -1,0 +1,245 @@
+/* ============================================================
+   Shadcn-style components — Tooltip, Breadcrumb, Skeleton
+   ============================================================ */
+
+/* ---------- TOOLTIP ---------- */
+.sc-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.sc-tooltip-content {
+  position: absolute;
+  z-index: 60;
+  white-space: nowrap;
+  background: #0e2d24;
+  color: #f3f5ef;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.96);
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+  pointer-events: none;
+}
+
+.sc-tooltip-content.open {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+/* posisi */
+.sc-tooltip-content.top {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform-origin: bottom center;
+  translate: -50% 0;
+}
+.sc-tooltip-content.bottom {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform-origin: top center;
+  translate: -50% 0;
+}
+.sc-tooltip-content.left {
+  right: calc(100% + 8px);
+  top: 50%;
+  transform-origin: center right;
+  translate: 0 -50%;
+}
+.sc-tooltip-content.right {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform-origin: center left;
+  translate: 0 -50%;
+}
+
+/* arrow */
+.sc-tooltip-arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #0e2d24;
+  transform: rotate(45deg);
+}
+.sc-tooltip-arrow.top    { bottom: -3px; left: 50%; margin-left: -4px; }
+.sc-tooltip-arrow.bottom { top: -3px; left: 50%; margin-left: -4px; }
+.sc-tooltip-arrow.left   { right: -3px; top: 50%; margin-top: -4px; }
+.sc-tooltip-arrow.right  { left: -3px; top: 50%; margin-top: -4px; }
+
+/* ---------- BREADCRUMB & SKELETON (dihapus, hanya Tooltip/Dialog/Tabs yang dipakai) ---------- */
+
+
+/* ============================================================
+   DIALOG — shadcn style
+   ============================================================ */
+.sc-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 45, 36, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: sc-overlay-in 0.18s ease-out;
+}
+
+.sc-dialog {
+  position: relative;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e9e2;
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: sc-dialog-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sc-dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: #7a857f;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  z-index: 2;
+}
+.sc-dialog-close:hover {
+  background: #f3f5ef;
+  color: #0e2d24;
+}
+
+.sc-dialog-head {
+  padding: 22px 24px 0;
+}
+.sc-dialog-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0e2d24;
+  letter-spacing: -0.3px;
+  padding-right: 28px;
+}
+.sc-dialog-desc {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #7a857f;
+  line-height: 1.6;
+}
+
+.sc-dialog-body {
+  padding: 18px 24px;
+  overflow-y: auto;
+}
+
+.sc-dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 24px;
+  border-top: 1px solid #eef1ea;
+  background: #f8fafc;
+}
+
+@keyframes sc-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sc-dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ============================================================
+   TABS — shadcn style
+   ============================================================ */
+.sc-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sc-tabs-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: #eef1ea;
+  border: 1px solid #e5e9e2;
+  border-radius: 12px;
+  padding: 4px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.sc-tabs-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: #7a857f;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.sc-tabs-trigger:hover {
+  color: #0e2d24;
+}
+
+.sc-tabs-trigger.active {
+  background: #ffffff;
+  color: #0e2d24;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.sc-tabs-icon {
+  display: inline-flex;
+  font-size: 0.95em;
+  color: #16c784;
+}
+
+.sc-tabs-content {
+  animation: sc-tab-in 0.2s ease-out;
+}
+
+@keyframes sc-tab-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* Tooltip wrapper di dalam sidebar menu → full width supaya menu item tetap rapi */
+.sidebar .menu .sc-tooltip,
+.sidebar-bottom .sc-tooltip {
+  display: flex;
+  width: 100%;
+}
+
+.sidebar .menu .sc-tooltip > .menu-item,
+.sidebar-bottom .sc-tooltip > .menu-item {
+  width: 100%;
+}

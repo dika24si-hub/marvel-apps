@@ -36,6 +36,14 @@ const translations = {
       proMode: "Mode Pro",
       logout: "Keluar",
       logoutConfirm: "Apakah Anda yakin ingin keluar dari VetCare?",
+      tip: {
+        dashboard: "Lihat ringkasan & statistik klinik",
+        pembayaran: "Kelola tagihan & transaksi pembayaran",
+        jadwal: "Atur jadwal periksa hewan",
+        hewan: "Kelola data hewan peliharaan",
+        dokter: "Kelola data dokter hewan",
+        rekamMedis: "Lihat riwayat rekam medis hewan",
+      },
     },
 
     navbar: {
@@ -370,6 +378,14 @@ const translations = {
       proMode: "Pro Mode",
       logout: "Logout",
       logoutConfirm: "Are you sure you want to sign out of VetCare?",
+      tip: {
+        dashboard: "View clinic summary & statistics",
+        pembayaran: "Manage invoices & payment transactions",
+        jadwal: "Manage pet examination schedules",
+        hewan: "Manage pet records",
+        dokter: "Manage veterinarian data",
+        rekamMedis: "View pet medical history",
+      },
     },
 
     navbar: {

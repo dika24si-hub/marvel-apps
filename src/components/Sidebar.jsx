@@ -17,6 +17,7 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 import fotoDika from "../assets/dika.jpg";
 import { useLang } from "../i18n/LanguageContext";
+import { Tooltip } from "./shadcn";
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -24,15 +25,15 @@ export default function Sidebar() {
   const [proMode, setProMode] = useState(true);
 
   const general = [
-    { name: t("sidebar.menu.dashboard"), icon: <FaTachometerAlt />, path: "/" },
-    { name: t("sidebar.menu.pembayaran"), icon: <FaMoneyBillWave />, path: "/pembayaran" },
-    { name: t("sidebar.menu.jadwal"), icon: <FaCalendarAlt />, path: "/jadwal" },
-    { name: t("sidebar.menu.hewan"), icon: <FaDog />, path: "/hewan" },
+    { name: t("sidebar.menu.dashboard"), icon: <FaTachometerAlt />, path: "/", tip: t("sidebar.tip.dashboard") },
+    { name: t("sidebar.menu.pembayaran"), icon: <FaMoneyBillWave />, path: "/pembayaran", tip: t("sidebar.tip.pembayaran") },
+    { name: t("sidebar.menu.jadwal"), icon: <FaCalendarAlt />, path: "/jadwal", tip: t("sidebar.tip.jadwal") },
+    { name: t("sidebar.menu.hewan"), icon: <FaDog />, path: "/hewan", tip: t("sidebar.tip.hewan") },
   ];
 
   const support = [
-    { name: t("sidebar.menu.dokter"), icon: <FaUserMd />, path: "/dokter" },
-    { name: t("sidebar.menu.rekamMedis"), icon: <FaNotesMedical />, path: "/rekam-medis" },
+    { name: t("sidebar.menu.dokter"), icon: <FaUserMd />, path: "/dokter", tip: t("sidebar.tip.dokter") },
+    { name: t("sidebar.menu.rekamMedis"), icon: <FaNotesMedical />, path: "/rekam-medis", tip: t("sidebar.tip.rekamMedis") },
   ];
 
   const handleLogout = () => {
@@ -45,16 +46,17 @@ export default function Sidebar() {
   };
 
   const renderItem = (menu, idx) => (
-    <NavLink
-      key={idx}
-      to={menu.path}
-      end={menu.path === "/"}
-      className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
-    >
-      <span className="m-icon">{menu.icon}</span>
-      <span className="m-label">{menu.name}</span>
-      {menu.badge && <span className="menu-badge">{menu.badge}</span>}
-    </NavLink>
+    <Tooltip key={idx} content={menu.tip} side="right">
+      <NavLink
+        to={menu.path}
+        end={menu.path === "/"}
+        className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+      >
+        <span className="m-icon">{menu.icon}</span>
+        <span className="m-label">{menu.name}</span>
+        {menu.badge && <span className="menu-badge">{menu.badge}</span>}
+      </NavLink>
+    </Tooltip>
   );
 
   return (
@@ -103,18 +105,22 @@ export default function Sidebar() {
         <div className="pro-mode">
           <span className="m-icon">⚡</span>
           <span className="m-label">{t("sidebar.proMode")}</span>
-          <button
-            type="button"
-            className={`toggle ${proMode ? "" : "off"}`}
-            onClick={() => setProMode((p) => !p)}
-            aria-label="Toggle Pro Mode"
-          />
+          <Tooltip content={proMode ? "Pro Mode aktif" : "Pro Mode nonaktif"} side="top">
+            <button
+              type="button"
+              className={`toggle ${proMode ? "" : "off"}`}
+              onClick={() => setProMode((p) => !p)}
+              aria-label="Toggle Pro Mode"
+            />
+          </Tooltip>
         </div>
 
-        <button type="button" className="menu-item logout" onClick={handleLogout}>
-          <span className="m-icon"><FaSignOutAlt /></span>
-          <span className="m-label">{t("sidebar.logout")}</span>
-        </button>
+        <Tooltip content="Keluar dari akun VetCare" side="right">
+          <button type="button" className="menu-item logout" onClick={handleLogout}>
+            <span className="m-icon"><FaSignOutAlt /></span>
+            <span className="m-label">{t("sidebar.logout")}</span>
+          </button>
+        </Tooltip>
 
         <div className="sidebar-profile">
           <img src={fotoDika} alt="Dr Dika" />

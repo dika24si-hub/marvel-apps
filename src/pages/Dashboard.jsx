@@ -27,6 +27,13 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useLang } from "../i18n/LanguageContext";
+import {
+  Tooltip as ScTooltip,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "../components/shadcn";
 
 // Statistik kunjungan harian (visit & treatment)
 const visitData = [
@@ -51,8 +58,54 @@ const visitData = [
   { d: "9 Mei", visit: 19, treat: -7 },
 ];
 
+// Data per jam (tab "Harian")
+const dailyData = [
+  { d: "08:00", visit: 4, treat: -2 },
+  { d: "09:00", visit: 7, treat: -3 },
+  { d: "10:00", visit: 9, treat: -5 },
+  { d: "11:00", visit: 6, treat: -2 },
+  { d: "12:00", visit: 3, treat: -1 },
+  { d: "13:00", visit: 5, treat: -3 },
+  { d: "14:00", visit: 8, treat: -4 },
+  { d: "15:00", visit: 10, treat: -6 },
+  { d: "16:00", visit: 6, treat: -2 },
+  { d: "17:00", visit: 4, treat: -2 },
+];
+
 export default function Dashboard() {
   const { t } = useLang();
+
+  // Helper render bar chart (dipakai di kedua tab Mingguan & Harian)
+  const renderChart = (data) => (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={data} stackOffset="sign">
+        <CartesianGrid vertical={false} stroke="#eef1ea" />
+        <XAxis
+          dataKey="d"
+          stroke="#aab2ac"
+          tickLine={false}
+          axisLine={false}
+          fontSize={11}
+          interval={data.length > 12 ? 2 : 0}
+        />
+        <YAxis stroke="#aab2ac" tickLine={false} axisLine={false} fontSize={11} />
+        <Tooltip
+          cursor={{ fill: "rgba(22, 199, 132, 0.06)" }}
+          contentStyle={{
+            borderRadius: 10,
+            border: "1px solid #e5e9e2",
+            fontSize: 12,
+          }}
+          formatter={(v, key) => [
+            `${Math.abs(v)}`,
+            key === "visit" ? t("dashboard.visit") : t("dashboard.treatment"),
+          ]}
+        />
+        <Bar dataKey="visit" stackId="cf" fill="#0e2d24" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="treat" stackId="cf" fill="#16c784" radius={[0, 0, 3, 3]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
 
   const activities = [
     {
@@ -112,18 +165,26 @@ export default function Dashboard() {
           </div>
 
           <div className="balance-actions">
-            <button className="bh-btn primary">
-              <FaPlus /> {t("dashboard.addPatient")}
-            </button>
-            <button className="bh-btn">
-              <FaSyringe /> {t("dashboard.addVaccine")}
-            </button>
-            <button className="bh-btn">
-              <FaCalendarPlus /> {t("dashboard.addAppointment")}
-            </button>
-            <button className="bh-btn icon" aria-label="More">
-              <FaEllipsisH />
-            </button>
+            <ScTooltip content="Daftarkan pasien hewan baru" side="bottom">
+              <button className="bh-btn primary">
+                <FaPlus /> {t("dashboard.addPatient")}
+              </button>
+            </ScTooltip>
+            <ScTooltip content="Catat vaksinasi hewan" side="bottom">
+              <button className="bh-btn">
+                <FaSyringe /> {t("dashboard.addVaccine")}
+              </button>
+            </ScTooltip>
+            <ScTooltip content="Buat jadwal periksa" side="bottom">
+              <button className="bh-btn">
+                <FaCalendarPlus /> {t("dashboard.addAppointment")}
+              </button>
+            </ScTooltip>
+            <ScTooltip content="Menu lainnya" side="left">
+              <button className="bh-btn icon" aria-label="More">
+                <FaEllipsisH />
+              </button>
+            </ScTooltip>
           </div>
         </div>
       </div>
@@ -131,55 +192,27 @@ export default function Dashboard() {
       {/* CHART + KPI */}
       <div className="cashflow-row">
         <div className="flow-card">
-          <div className="card-head">
-            <h3>
-              <FaHeartbeat /> {t("dashboard.visitChart")}
-            </h3>
+          {/* 🟢 Shadcn Tabs — ganti view Mingguan / Harian */}
+          <Tabs defaultValue="weekly">
+            <div className="card-head">
+              <h3>
+                <FaHeartbeat /> {t("dashboard.visitChart")}
+              </h3>
 
-            <div style={{ display: "flex", gap: 10 }}>
-              <div className="tab-group">
-                <button className="active">{t("common.weekly")}</button>
-                <button>{t("common.daily")}</button>
+              <div style={{ display: "flex", gap: 10 }}>
+                <TabsList>
+                  <TabsTrigger value="weekly">{t("common.weekly")}</TabsTrigger>
+                  <TabsTrigger value="daily">{t("common.daily")}</TabsTrigger>
+                </TabsList>
+                <button className="manage-btn">
+                  <FaCog /> {t("common.manage")}
+                </button>
               </div>
-              <button className="manage-btn">
-                <FaCog /> {t("common.manage")}
-              </button>
             </div>
-          </div>
 
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={visitData} stackOffset="sign">
-              <CartesianGrid vertical={false} stroke="#eef1ea" />
-              <XAxis
-                dataKey="d"
-                stroke="#aab2ac"
-                tickLine={false}
-                axisLine={false}
-                fontSize={11}
-                interval={2}
-              />
-              <YAxis
-                stroke="#aab2ac"
-                tickLine={false}
-                axisLine={false}
-                fontSize={11}
-              />
-              <Tooltip
-                cursor={{ fill: "rgba(22, 199, 132, 0.06)" }}
-                contentStyle={{
-                  borderRadius: 10,
-                  border: "1px solid #e5e9e2",
-                  fontSize: 12,
-                }}
-                formatter={(v, key) => [
-                  `${Math.abs(v)}`,
-                  key === "visit" ? t("dashboard.visit") : t("dashboard.treatment"),
-                ]}
-              />
-              <Bar dataKey="visit" stackId="cf" fill="#0e2d24" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="treat" stackId="cf" fill="#16c784" radius={[0, 0, 3, 3]} />
-            </BarChart>
-          </ResponsiveContainer>
+            <TabsContent value="weekly">{renderChart(visitData)}</TabsContent>
+            <TabsContent value="daily">{renderChart(dailyData)}</TabsContent>
+          </Tabs>
         </div>
 
         <div className="kpi-stack">
@@ -190,9 +223,11 @@ export default function Dashboard() {
             <div className="label">{t("dashboard.kpiPasien")}</div>
             <div className="value">
               218
-              <span className="delta-up" style={{ marginLeft: 8 }}>
-                <FaArrowUp /> 45.0%
-              </span>
+              <ScTooltip content="Naik 45% dibanding bulan lalu" side="top">
+                <span className="delta-up" style={{ marginLeft: 8 }}>
+                  <FaArrowUp /> 45.0%
+                </span>
+              </ScTooltip>
             </div>
             <small style={{ color: "#7a857f", fontSize: 11.5, marginTop: 4 }}>
               {t("dashboard.kpiPasienHelp")}
@@ -206,9 +241,11 @@ export default function Dashboard() {
             <div className="label">{t("dashboard.kpiVaksin")}</div>
             <div className="value">
               74
-              <span className="delta-down" style={{ marginLeft: 8 }}>
-                <FaArrowDown /> 12.5%
-              </span>
+              <ScTooltip content="Turun 12.5% dibanding bulan lalu" side="top">
+                <span className="delta-down" style={{ marginLeft: 8 }}>
+                  <FaArrowDown /> 12.5%
+                </span>
+              </ScTooltip>
             </div>
             <small style={{ color: "#7a857f", fontSize: 11.5, marginTop: 4 }}>
               {t("dashboard.kpiVaksinHelp")}

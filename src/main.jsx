@@ -6,6 +6,7 @@ import App from "./App";
 import "./index.css";
 import "./App.css";
 import "./components/ui/ui.css";
+import "./components/shadcn/shadcn.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

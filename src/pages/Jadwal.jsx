@@ -16,7 +16,6 @@ import {
   PageHeader,
   Button,
   StatCard,
-  FilterChips,
   Card,
   Table,
   Badge,
@@ -24,6 +23,7 @@ import {
   EmptyState,
   Pagination,
 } from "../components/ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/shadcn";
 
 const DATA = [
   { no: 1, hewan: "Milo",  jenis: "Kucing", pemilik: "Budi Santoso",  dokter: "Dr. Dika Pratama",   tanggal: "12 Mei 2026", jam: "09:00", keperluanKey: "vaksinRabies",   ruang: "R-101", status: "Terjadwal"   },
@@ -109,78 +109,83 @@ export default function Jadwal() {
         <StatCard icon={<FaCheckCircle />} color="success" label={t("jadwal.selesai")}      value={stats.selesai} />
       </div>
 
-      <div className="toolbar toolbar-filter-only" style={{ marginTop: 14 }}>
-        <FilterChips
-          label="Filter"
-          value={filter}
-          onChange={(k) => {
-            setFilter(k);
-            setPage(1);
-          }}
-          options={filterKeys.map((f) => ({
-            key: f,
-            label: f === "Semua" ? t("common.all") : t(`status.${f}`),
-          }))}
-        />
-      </div>
-
-      <Card
-        title={t("jadwal.daftarJadwal")}
-        subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+      {/* 🟢 Shadcn Tabs — navigasi status jadwal */}
+      <Tabs
+        value={filter}
+        onValueChange={(k) => {
+          setFilter(k);
+          setPage(1);
+        }}
+        className="rekam-tabs"
       >
-        <Table
-          rowKey="no"
-          data={pageRows}
-          empty={<EmptyState title={t("common.noMatch")} />}
-          columns={[
-            { key: "no", header: t("table.no"),
-              render: (r) => <span className="muted">#{String(r.no).padStart(2, "0")}</span> },
-            { key: "hewan", header: t("table.hewan"),
-              render: (r) => (
-                <div className="pet-cell">
-                  <div className={`pet-thumb ${r.jenis === "Anjing" ? "orange" : "blue"}`}>
-                    <PetIcon jenis={r.jenis} />
-                  </div>
-                  <div>
-                    <b>{r.hewan}</b>
-                    <small>{t(`jenis.${r.jenis}`)}</small>
-                  </div>
-                </div>
-              ),
-            },
-            { key: "pemilik", header: t("table.pemilik") },
-            { key: "dokter", header: t("table.dokter") },
-            { key: "tanggalJam", header: t("table.tanggalJam"),
-              render: (r) => (
-                <div className="date-cell">
-                  <FaCalendarAlt />
-                  <div>
-                    <b>{formatDate(r.tanggal, lang)}</b>
-                    <small>{r.jam} {t("common.tz")}</small>
-                  </div>
-                </div>
-              ),
-            },
-            { key: "keperluan", header: t("table.keperluan"),
-              render: (r) => <Tag color="brand">{keperluanLabel(r.keperluanKey)}</Tag> },
-            { key: "ruang", header: t("table.ruang"),
-              render: (r) => <Tag color="default">{r.ruang}</Tag> },
-            { key: "status", header: t("table.status"),
-              render: (r) => (
-                <Badge variant={STATUS_VARIANT[r.status]} dot>
-                  {t(`status.${r.status}`)}
-                </Badge>
-              ),
-            },
-          ]}
-        />
+        <TabsList>
+          {filterKeys.map((f) => (
+            <TabsTrigger key={f} value={f}>
+              {f === "Semua" ? t("common.all") : t(`status.${f}`)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-        {filtered.length > PER_PAGE && (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-          </div>
-        )}
-      </Card>
+        <TabsContent value={filter}>
+          <Card
+            title={t("jadwal.daftarJadwal")}
+            subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
+          >
+            <Table
+              rowKey="no"
+              data={pageRows}
+              empty={<EmptyState title={t("common.noMatch")} />}
+              columns={[
+                { key: "no", header: t("table.no"),
+                  render: (r) => <span className="muted">#{String(r.no).padStart(2, "0")}</span> },
+                { key: "hewan", header: t("table.hewan"),
+                  render: (r) => (
+                    <div className="pet-cell">
+                      <div className={`pet-thumb ${r.jenis === "Anjing" ? "orange" : "blue"}`}>
+                        <PetIcon jenis={r.jenis} />
+                      </div>
+                      <div>
+                        <b>{r.hewan}</b>
+                        <small>{t(`jenis.${r.jenis}`)}</small>
+                      </div>
+                    </div>
+                  ),
+                },
+                { key: "pemilik", header: t("table.pemilik") },
+                { key: "dokter", header: t("table.dokter") },
+                { key: "tanggalJam", header: t("table.tanggalJam"),
+                  render: (r) => (
+                    <div className="date-cell">
+                      <FaCalendarAlt />
+                      <div>
+                        <b>{formatDate(r.tanggal, lang)}</b>
+                        <small>{r.jam} {t("common.tz")}</small>
+                      </div>
+                    </div>
+                  ),
+                },
+                { key: "keperluan", header: t("table.keperluan"),
+                  render: (r) => <Tag color="brand">{keperluanLabel(r.keperluanKey)}</Tag> },
+                { key: "ruang", header: t("table.ruang"),
+                  render: (r) => <Tag color="default">{r.ruang}</Tag> },
+                { key: "status", header: t("table.status"),
+                  render: (r) => (
+                    <Badge variant={STATUS_VARIANT[r.status]} dot>
+                      {t(`status.${r.status}`)}
+                    </Badge>
+                  ),
+                },
+              ]}
+            />
+
+            {filtered.length > PER_PAGE && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+                <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
