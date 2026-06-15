@@ -17,6 +17,7 @@ const translations = {
 
     sidebar: {
       role: "Dokter Hewan",
+      customerRole: "Pemilik Hewan",
       sections: {
         general: "Umum",
         support: "Pendukung",
@@ -29,6 +30,9 @@ const translations = {
         rekamMedis: "Rekam Medis",
         pembayaran: "Pembayaran",
         promo: "Promo",
+        promosi: "Promosi",
+        daftarHewan: "Pendaftaran",
+        ulasanDokter: "Ulasan Dokter",
         settings: "Pengaturan",
         help: "Bantuan",
         components: "Components",
@@ -43,6 +47,9 @@ const translations = {
         hewan: "Kelola data hewan peliharaan",
         dokter: "Kelola data dokter hewan",
         rekamMedis: "Lihat riwayat rekam medis hewan",
+        promosi: "Lihat promo & penawaran spesial",
+        daftarHewan: "Daftarkan hewan peliharaan yang sakit",
+        ulasanDokter: "Beri rating & ulasan untuk dokter",
       },
     },
 
@@ -359,6 +366,7 @@ const translations = {
 
     sidebar: {
       role: "Veterinarian",
+      customerRole: "Pet Owner",
       sections: {
         general: "General",
         support: "Support",
@@ -371,6 +379,9 @@ const translations = {
         rekamMedis: "Medical Records",
         pembayaran: "Payments",
         promo: "Promo",
+        promosi: "Promotions",
+        daftarHewan: "Registration",
+        ulasanDokter: "Doctor Reviews",
         settings: "Settings",
         help: "Help",
         components: "Components",
@@ -385,6 +396,9 @@ const translations = {
         hewan: "Manage pet records",
         dokter: "Manage veterinarian data",
         rekamMedis: "View pet medical history",
+        promosi: "View promos & special offers",
+        daftarHewan: "Register your sick pet",
+        ulasanDokter: "Rate & review your veterinarians",
       },
     },
 

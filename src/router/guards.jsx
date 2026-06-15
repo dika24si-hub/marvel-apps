@@ -1,15 +1,163 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-const Guards = ({ children }) => {
+// ======================
+// ROLE CONSTANTS
+// ======================
 
-  const isLogin =
-    localStorage.getItem("isLogin");
+export const ROLES = {
+  ADMIN: "admin",
+  DOCTOR: "doctor",
+  CUSTOMER: "customer",
+};
 
-  if(!isLogin){
-    return <Navigate to="/login" />;
+// ======================
+// HOME PATH PER ROLE
+// ======================
+
+export const roleHome = (role) => {
+  if (role === ROLES.CUSTOMER) return "/customer/pembayaran";
+  if (role === ROLES.DOCTOR) return "/doctor/jadwal";
+  // admin
+  return "/";
+};
+
+// ======================
+// LOADING SCREEN
+// ======================
+
+const LoadingScreen = () => {
+  return (
+    <div
+      style={{
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        fontSize: "20px",
+        fontWeight: "600",
+      }}
+    >
+      Memuat...
+    </div>
+  );
+};
+
+// ======================
+// MAIN GUARD
+// ======================
+
+const Guards = ({
+  children,
+  roles = [],
+}) => {
+  const {
+    loading,
+    isAuthenticated,
+    role,
+  } = useAuth();
+
+  const location = useLocation();
+
+  // Loading auth
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  // Belum login, ATAU sesi ada tapi role tidak bisa ditentukan
+  // (mis. profil gagal dimuat karena jaringan). Arahkan ke login
+  // supaya tidak terjebak di layar "Memuat...".
+  if (!isAuthenticated || !role) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{
+          from: location,
+        }}
+      />
+    );
+  }
+
+  // Jika route membutuhkan role tertentu, arahkan ke home sesuai role.
+  if (
+    roles.length > 0 &&
+    !roles.includes(role)
+  ) {
+    return (
+      <Navigate
+        to={roleHome(role)}
+        replace
+      />
+    );
   }
 
   return children;
 };
 
 export default Guards;
+
+// ======================
+// ROLE GUARDS
+// ======================
+
+export const AdminGuard = ({
+  children,
+}) => (
+  <Guards roles={[ROLES.ADMIN]}>
+    {children}
+  </Guards>
+);
+
+export const DoctorGuard = ({
+  children,
+}) => (
+  <Guards roles={[ROLES.DOCTOR]}>
+    {children}
+  </Guards>
+);
+
+export const CustomerGuard = ({
+  children,
+}) => (
+  <Guards roles={[ROLES.CUSTOMER]}>
+    {children}
+  </Guards>
+);
+
+// ======================
+// PERMISSIONS
+// ======================
+
+export const usePermissions = () => {
+  const { role } = useAuth();
+
+  return {
+    role,
+
+    isAdmin:
+      role === ROLES.ADMIN,
+
+    isDoctor:
+      role === ROLES.DOCTOR,
+
+    isCustomer:
+      role === ROLES.CUSTOMER,
+
+    canManageUsers:
+      role === ROLES.ADMIN,
+
+    canManageDoctors:
+      role === ROLES.ADMIN,
+
+    canManagePatients:
+      role === ROLES.ADMIN ||
+      role === ROLES.DOCTOR,
+
+    canCreateMedicalRecord:
+      role === ROLES.DOCTOR,
+
+    canViewOwnPets:
+      role === ROLES.CUSTOMER,
+  };
+};

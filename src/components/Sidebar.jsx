@@ -12,37 +12,130 @@ import {
   FaQuestionCircle,
   FaAngleDown,
   FaAngleLeft,
-  FaExchangeAlt,
+  FaTags,
+  FaStar,
+  FaNotesMedical as FaRegisterPet,
 } from "react-icons/fa";
+
 import { NavLink, useNavigate } from "react-router-dom";
+
 import fotoDika from "../assets/dika.jpg";
+
 import { useLang } from "../i18n/LanguageContext";
 import { Tooltip } from "./shadcn";
+import { useAuth } from "../context/AuthContext";
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const { t } = useLang();
+
+  const { role, user, profile, logout } = useAuth();
+
   const [proMode, setProMode] = useState(true);
 
-  const general = [
-    { name: t("sidebar.menu.dashboard"), icon: <FaTachometerAlt />, path: "/", tip: t("sidebar.tip.dashboard") },
-    { name: t("sidebar.menu.pembayaran"), icon: <FaMoneyBillWave />, path: "/pembayaran", tip: t("sidebar.tip.pembayaran") },
-    { name: t("sidebar.menu.jadwal"), icon: <FaCalendarAlt />, path: "/jadwal", tip: t("sidebar.tip.jadwal") },
-    { name: t("sidebar.menu.hewan"), icon: <FaDog />, path: "/hewan", tip: t("sidebar.tip.hewan") },
-  ];
+  // ==========================
+  // MENU BERDASARKAN ROLE
+  // ==========================
 
-  const support = [
-    { name: t("sidebar.menu.dokter"), icon: <FaUserMd />, path: "/dokter", tip: t("sidebar.tip.dokter") },
-    { name: t("sidebar.menu.rekamMedis"), icon: <FaNotesMedical />, path: "/rekam-medis", tip: t("sidebar.tip.rekamMedis") },
-  ];
+  let general = [];
+  let support = [];
 
-  const handleLogout = () => {
+  if (role === "customer") {
+    // Customer (pemilik hewan) hanya melihat:
+    // pembayaran, promosi, dan daftarkan hewan sakit.
+    general = [
+      {
+        name: t("sidebar.menu.pembayaran"),
+        icon: <FaMoneyBillWave />,
+        path: "/customer/pembayaran",
+        tip: t("sidebar.tip.pembayaran"),
+      },
+      {
+        name: t("sidebar.menu.promosi"),
+        icon: <FaTags />,
+        path: "/customer/promosi",
+        tip: t("sidebar.tip.promosi"),
+      },
+      {
+        name: t("sidebar.menu.daftarHewan"),
+        icon: <FaRegisterPet />,
+        path: "/customer/daftar-hewan",
+        tip: t("sidebar.tip.daftarHewan"),
+      },
+      {
+        name: t("sidebar.menu.ulasanDokter"),
+        icon: <FaStar />,
+        path: "/customer/ulasan-dokter",
+        tip: t("sidebar.tip.ulasanDokter"),
+      },
+    ];
+
+    support = [];
+  } else if (role === "doctor") {
+    // Dokter hanya melihat menu Jadwal Periksa.
+    general = [
+      {
+        name: t("sidebar.menu.jadwal"),
+        icon: <FaCalendarAlt />,
+        path: "/doctor/jadwal",
+        tip: t("sidebar.tip.jadwal"),
+      },
+    ];
+
+    support = [];
+  } else {
+    // Admin melihat menu lengkap (tanpa jadwal — dipindah ke dokter).
+    general = [
+      {
+        name: t("sidebar.menu.dashboard"),
+        icon: <FaTachometerAlt />,
+        path: "/",
+        tip: t("sidebar.tip.dashboard"),
+      },
+      {
+        name: t("sidebar.menu.pembayaran"),
+        icon: <FaMoneyBillWave />,
+        path: "/pembayaran",
+        tip: t("sidebar.tip.pembayaran"),
+      },
+      {
+        name: t("sidebar.menu.hewan"),
+        icon: <FaDog />,
+        path: "/hewan",
+        tip: t("sidebar.tip.hewan"),
+      },
+    ];
+
+    support = [
+      {
+        name: t("sidebar.menu.dokter"),
+        icon: <FaUserMd />,
+        path: "/dokter",
+        tip: t("sidebar.tip.dokter"),
+      },
+      {
+        name: t("sidebar.menu.rekamMedis"),
+        icon: <FaNotesMedical />,
+        path: "/rekam-medis",
+        tip: t("sidebar.tip.rekamMedis"),
+      },
+    ];
+  }
+
+  // ==========================
+  // LOGOUT
+  // ==========================
+
+  const handleLogout = async () => {
     const ok = window.confirm(t("sidebar.logoutConfirm"));
     if (!ok) return;
-    localStorage.removeItem("isLogin");
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login", { replace: true });
+
+    try {
+      await logout();
+      navigate("/login", { replace: true });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const renderItem = (menu, idx) => (
@@ -50,7 +143,9 @@ export default function Sidebar() {
       <NavLink
         to={menu.path}
         end={menu.path === "/"}
-        className={({ isActive }) => (isActive ? "menu-item active" : "menu-item")}
+        className={({ isActive }) =>
+          isActive ? "menu-item active" : "menu-item"
+        }
       >
         <span className="m-icon">{menu.icon}</span>
         <span className="m-label">{menu.name}</span>
@@ -58,6 +153,16 @@ export default function Sidebar() {
       </NavLink>
     </Tooltip>
   );
+
+  // Label role untuk ditampilkan di profil
+  const roleLabel =
+    role === "admin"
+      ? "Admin"
+      : role === "doctor"
+      ? t("sidebar.role")
+      : role === "customer"
+      ? t("sidebar.customerRole")
+      : "";
 
   return (
     <aside className="sidebar">
@@ -69,6 +174,7 @@ export default function Sidebar() {
           </div>
           <h2>{t("app.name")}</h2>
         </div>
+
         <button className="brand-collapse" type="button" aria-label="Collapse">
           <FaAngleLeft />
         </button>
@@ -78,34 +184,37 @@ export default function Sidebar() {
       <div className="menu-section">{t("sidebar.sections.general")}</div>
       <nav className="menu">{general.map(renderItem)}</nav>
 
-      {/* SUPPORT */}
-      <div className="menu-section">{t("sidebar.sections.support")}</div>
-      <nav className="menu">
-        {support.map(renderItem)}
-        {/* Promo item — bukan link, hanya badge */}
-        <div className="menu-item static">
-          <span className="m-icon"><FaExchangeAlt /></span>
-          <span className="m-label">{t("sidebar.menu.promo")}</span>
-          <span className="menu-badge">€150</span>
-        </div>
-      </nav>
+      {/* SUPPORT — hanya admin & dokter */}
+      {support.length > 0 && (
+        <>
+          <div className="menu-section">{t("sidebar.sections.support")}</div>
+          <nav className="menu">{support.map(renderItem)}</nav>
+        </>
+      )}
 
       {/* BOTTOM */}
       <div className="sidebar-bottom">
-        {/* Pakai <button> supaya tidak match active state seperti NavLink */}
         <button type="button" className="menu-item static">
-          <span className="m-icon"><FaCog /></span>
+          <span className="m-icon">
+            <FaCog />
+          </span>
           <span className="m-label">{t("sidebar.menu.settings")}</span>
         </button>
+
         <button type="button" className="menu-item static">
-          <span className="m-icon"><FaQuestionCircle /></span>
+          <span className="m-icon">
+            <FaQuestionCircle />
+          </span>
           <span className="m-label">{t("sidebar.menu.help")}</span>
         </button>
 
         <div className="pro-mode">
           <span className="m-icon">⚡</span>
           <span className="m-label">{t("sidebar.proMode")}</span>
-          <Tooltip content={proMode ? "Pro Mode aktif" : "Pro Mode nonaktif"} side="top">
+          <Tooltip
+            content={proMode ? "Pro Mode aktif" : "Pro Mode nonaktif"}
+            side="top"
+          >
             <button
               type="button"
               className={`toggle ${proMode ? "" : "off"}`}
@@ -116,17 +225,23 @@ export default function Sidebar() {
         </div>
 
         <Tooltip content="Keluar dari akun VetCare" side="right">
-          <button type="button" className="menu-item logout" onClick={handleLogout}>
-            <span className="m-icon"><FaSignOutAlt /></span>
+          <button
+            type="button"
+            className="menu-item logout"
+            onClick={handleLogout}
+          >
+            <span className="m-icon">
+              <FaSignOutAlt />
+            </span>
             <span className="m-label">{t("sidebar.logout")}</span>
           </button>
         </Tooltip>
 
         <div className="sidebar-profile">
-          <img src={fotoDika} alt="Dr Dika" />
+          <img src={fotoDika} alt="Profile" />
           <div className="meta">
-            <b>Dr. Dika</b>
-            <small>dika@vetcare.id</small>
+            <b>{profile?.full_name || "VetCare User"}</b>
+            <small>{roleLabel || user?.email || "user@vetcare.com"}</small>
           </div>
           <FaAngleDown className="chev" />
         </div>

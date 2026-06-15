@@ -1,84 +1,81 @@
 import { Outlet } from "react-router-dom";
-import {
-  FaPaw,
-  FaStethoscope,
-  FaUserMd,
-  FaHeartbeat,
-  FaShieldAlt,
-} from "react-icons/fa";
+import { FaPaw, FaShieldAlt } from "react-icons/fa";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 export default function AuthLayout() {
   return (
-    <div className="auth-pro">
-      {/* LEFT — Branding Panel (hidden di mobile) */}
-      <aside className="auth-pro-side">
-        <div className="auth-pro-brand">
-          <div className="auth-pro-logo">
+    <div className="ax">
+      {/* LEFT — Brand / Hero (hidden di mobile) */}
+      <aside className="ax-side">
+        {/* decorative orbs */}
+        <span className="ax-orb o1" />
+        <span className="ax-orb o2" />
+        <span className="ax-orb o3" />
+
+        <div className="ax-brand">
+          <div className="ax-brand-logo">
             <FaPaw />
           </div>
-          <h2>VetCare</h2>
+          <div>
+            <h2>VetCare</h2>
+            <span>Veterinary Clinic Management</span>
+          </div>
         </div>
 
-        <div className="auth-pro-hero">
+        <div className="ax-hero">
+          <span className="ax-hero-badge">
+            <FaShieldAlt /> Terpercaya &amp; Aman
+          </span>
+
           <h1>
-            Kelola klinik hewan Anda dengan
-            <br />
-            <span>lebih profesional</span>.
+            Rawat hewan kesayangan dengan{" "}
+            <em>perawatan terbaik</em>.
           </h1>
+
           <p>
-            Platform manajemen terintegrasi untuk klinik dokter hewan — mulai
-            dari data hewan, jadwal periksa, rekam medis, hingga pembayaran.
+            Platform manajemen klinik dokter hewan yang terintegrasi — dari
+            jadwal periksa, rekam medis, hingga pembayaran, semua dalam satu
+            tempat.
           </p>
+
+          <div className="ax-stats">
+            <div className="ax-stat">
+              <strong>12K+</strong>
+              <span>Hewan Terdaftar</span>
+            </div>
+            <div className="ax-stat">
+              <strong>98%</strong>
+              <span>Kepuasan Klien</span>
+            </div>
+            <div className="ax-stat">
+              <strong>24/7</strong>
+              <span>Dukungan</span>
+            </div>
+          </div>
         </div>
 
-        <ul className="auth-pro-features">
-          <li>
-            <span className="feat-ic blue">
-              <FaStethoscope />
-            </span>
+        <div className="ax-quote">
+          <p>
+            “VetCare benar-benar mengubah cara kami mengelola klinik. Semua data
+            pasien rapi dan mudah diakses.”
+          </p>
+          <div className="ax-quote-by">
+            <span className="ax-quote-av">DR</span>
             <div>
-              <b>Pemeriksaan Terpadu</b>
-              <small>Catatan medis langsung tersimpan rapi.</small>
+              <b>drh. Dina Rahmawati</b>
+              <small>Kepala Klinik — PetWell Care</small>
             </div>
-          </li>
-          <li>
-            <span className="feat-ic teal">
-              <FaUserMd />
-            </span>
-            <div>
-              <b>Manajemen Dokter</b>
-              <small>Atur jadwal & spesialisasi dengan mudah.</small>
-            </div>
-          </li>
-          <li>
-            <span className="feat-ic orange">
-              <FaHeartbeat />
-            </span>
-            <div>
-              <b>Laporan Real-time</b>
-              <small>Pantau performa klinik setiap saat.</small>
-            </div>
-          </li>
-        </ul>
-
-        <div className="auth-pro-secure">
-          <FaShieldAlt />
-          Data klinik Anda terenkripsi & aman.
+          </div>
         </div>
-
-        {/* Decorative shapes */}
-        <span className="auth-blob b1" />
-        <span className="auth-blob b2" />
       </aside>
 
       {/* RIGHT — Form */}
-      <main className="auth-pro-main">
-        <div className="auth-pro-topbar">
+      <main className="ax-main">
+        <div className="ax-topbar">
           <LanguageSwitcher />
         </div>
 
-        <div className="auth-pro-card">
+        <div className="ax-card">
           <Outlet />
         </div>
       </main>
