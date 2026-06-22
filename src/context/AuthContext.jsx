@@ -35,9 +35,7 @@ export const useAuth = () => {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error(
-      "useAuth must be used within AuthProvider"
-    );
+    throw new Error("useAuth must be used within AuthProvider");
   }
 
   return context;
@@ -63,9 +61,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
-  // Loading awal HANYA true bila benar-benar ada sesi yang perlu dipulihkan
-  // (sesi lokal admin/dokter ATAU token Supabase customer). Jika tidak ada,
-  // langsung tampilkan UI tanpa menunggu jaringan sama sekali.
+  // Loading awal HANYA true bila benar-benar ada sesi yang perlu dipulihkan.
   const [loading, setLoading] = useState(() => {
     try {
       return (
@@ -79,10 +75,8 @@ export const AuthProvider = ({ children }) => {
   // ==========================
   // GET PROFILE (Supabase - customer)
   // ==========================
-
   const fetchProfile = async (userId) => {
     try {
-      // maybeSingle: tidak melempar 406 jika baris profil belum ada.
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -107,7 +101,6 @@ export const AuthProvider = ({ children }) => {
   // ==========================
   // INIT AUTH
   // ==========================
-
   useEffect(() => {
     let done = false;
 
@@ -117,13 +110,11 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
 
-    // Safety: apapun yang terjadi, jangan biarkan layar "Memuat..." lebih
-    // dari 1,5 detik (mis. proxy gagal / Supabase tidak bisa dijangkau).
     const safetyTimer = setTimeout(finish, 1500);
 
     const initializeAuth = async () => {
       try {
-        // 1. Cek sesi lokal (admin / dokter) lebih dulu — instan, tanpa jaringan.
+        // 1. Cek sesi lokal (admin / dokter) lebih dulu — instan.
         const localRaw = localStorage.getItem(LOCAL_SESSION_KEY);
         if (localRaw) {
           const parsed = JSON.parse(localRaw);
@@ -133,8 +124,7 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        // 2. Cek sesi Supabase (customer), tapi jangan biarkan menggantung.
-        //    Race melawan timeout supaya tidak nyangkut saat jaringan buruk.
+        // 2. Cek sesi Supabase (customer), race melawan timeout.
         const sessionResult = await Promise.race([
           supabase.auth.getSession(),
           new Promise((resolve) =>
@@ -146,7 +136,6 @@ export const AuthProvider = ({ children }) => {
 
         if (session?.user) {
           setUser(session.user);
-          // Profil di-fetch di latar belakang, tidak menahan UI.
           fetchProfile(session.user.id);
         }
       } catch (err) {
@@ -162,8 +151,7 @@ export const AuthProvider = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      // Jika ada sesi lokal admin/dokter aktif, abaikan event Supabase
-      // supaya tidak menimpa state.
+      // Jika ada sesi lokal admin/dokter aktif, abaikan event Supabase.
       if (localStorage.getItem(LOCAL_SESSION_KEY)) return;
 
       if (session?.user) {
@@ -183,7 +171,6 @@ export const AuthProvider = ({ children }) => {
   // ==========================
   // LOGIN
   // ==========================
-
   const login = async (email, password) => {
     try {
       // 1. Cek akun lokal (admin / dokter) lebih dulu.
@@ -215,18 +202,14 @@ export const AuthProvider = ({ children }) => {
         return { success: true, role: local.role };
       }
 
-      // 2. Selain itu, login customer via Supabase.
-      const { data, error } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      // 2. Login customer via Supabase.
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       if (error) {
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
 
       const profileData = await fetchProfile(data.user.id);
@@ -249,7 +232,7 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      // Catat waktu login terakhir (tidak memblokir alur jika gagal).
+      // Catat waktu login terakhir (tidak memblokir alur).
       supabase
         .from("profiles")
         .update({ last_login: new Date().toISOString() })
@@ -258,22 +241,15 @@ export const AuthProvider = ({ children }) => {
           if (updErr) console.error("Update last_login error:", updErr);
         });
 
-      return {
-        success: true,
-        role: profileData.role,
-      };
+      return { success: true, role: profileData.role };
     } catch (err) {
-      return {
-        success: false,
-        error: err.message,
-      };
+      return { success: false, error: err.message };
     }
   };
 
   // ==========================
   // REGISTER CUSTOMER (Supabase)
   // ==========================
-
   const register = async (email, password, fullName, phone) => {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -288,15 +264,11 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (error) {
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
 
-      // Profil otomatis dibuat oleh trigger `handle_new_user` di database.
-      // Jika ada session aktif (email confirmation nonaktif), lengkapi
-      // data profil via upsert sebagai fallback.
+      // Profil otomatis dibuat oleh trigger `handle_new_user`.
+      // Fallback upsert jika ada session aktif.
       if (data.session && data.user) {
         await supabase.from("profiles").upsert(
           {
@@ -313,17 +285,13 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (err) {
-      return {
-        success: false,
-        error: err.message,
-      };
+      return { success: false, error: err.message };
     }
   };
 
   // ==========================
-  // LOGOUT
+  // LOGOUT (kembali ke halaman guest)
   // ==========================
-
   const logout = async () => {
     try {
       // Hapus sesi lokal (admin/dokter) bila ada.
@@ -335,9 +303,12 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setProfile(null);
 
+      // Kembali ke halaman guest setelah logout.
+      window.location.href = "/";
       return { success: true };
     } catch (err) {
       console.error(err);
+      window.location.href = "/";
       return { success: false };
     }
   };
@@ -345,13 +316,9 @@ export const AuthProvider = ({ children }) => {
   // ==========================
   // UPDATE PROFILE (customer)
   // ==========================
-
   const updateProfile = async (updates) => {
     if (!user) {
-      return {
-        success: false,
-        error: "User tidak login",
-      };
+      return { success: false, error: "User tidak login" };
     }
 
     // Akun lokal tidak tersimpan di database.
@@ -372,20 +339,14 @@ export const AuthProvider = ({ children }) => {
         .eq("id", user.id);
 
       if (error) {
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
 
       await fetchProfile(user.id);
 
       return { success: true };
     } catch (err) {
-      return {
-        success: false,
-        error: err.message,
-      };
+      return { success: false, error: err.message };
     }
   };
 
@@ -398,21 +359,13 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     profile,
-
     role: profile?.role || null,
-
     loading,
-
     isAuthenticated: !!user,
-
     login,
-
     register,
-
     logout,
-
     updateProfile,
-
     getUserProfile,
   };
 
@@ -428,15 +381,10 @@ export const useRole = () => {
 
   return {
     role,
-
     isAdmin: role === "admin",
-
     isDoctor: role === "doctor",
-
     isCustomer: role === "customer",
-
     hasRole: (requiredRole) => role === requiredRole,
-
     hasAnyRole: (roles) => roles.includes(role),
   };
 };

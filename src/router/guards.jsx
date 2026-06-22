@@ -5,7 +5,6 @@ import { useAuth } from "../context/AuthContext";
 // ======================
 // ROLE CONSTANTS
 // ======================
-
 export const ROLES = {
   ADMIN: "admin",
   DOCTOR: "doctor",
@@ -16,22 +15,20 @@ export const ROLES = {
 // HOME PATH PER ROLE
 // ======================
 // Satu sumber kebenaran untuk tujuan setelah login / redirect.
-//   customer -> halaman member          (/customer)
-//   doctor   -> dashboard dokter         (/doctor/jadwal)
-//   admin    -> dashboard admin          (/)
-// Dipakai di AuthSlider (setelah login) & Guards (proteksi lintas-role).
-
+//   customer -> halaman member    (/customer)
+//   doctor   -> dashboard dokter   (/doctor/jadwal)
+//   admin    -> dashboard admin    (/admin)
+// Belum login / tidak dikenali -> halaman guest (/)
 export const roleHome = (role) => {
   if (role === ROLES.CUSTOMER) return "/customer";
   if (role === ROLES.DOCTOR) return "/doctor/jadwal";
-  if (role === ROLES.ADMIN) return "/";
-  return "/login"; // role tidak dikenali / belum login
+  if (role === ROLES.ADMIN) return "/admin";
+  return "/";
 };
 
 // ======================
 // LOADING SCREEN
 // ======================
-
 const LoadingScreen = () => {
   return (
     <div
@@ -52,10 +49,8 @@ const LoadingScreen = () => {
 // ======================
 // MAIN GUARD
 // ======================
-
 const Guards = ({ children, roles = [] }) => {
   const { loading, isAuthenticated, role } = useAuth();
-
   const location = useLocation();
 
   // Loading auth
@@ -63,17 +58,14 @@ const Guards = ({ children, roles = [] }) => {
     return <LoadingScreen />;
   }
 
-  // Belum login, ATAU sesi ada tapi role tidak bisa ditentukan
-  // (mis. profil gagal dimuat karena jaringan). Arahkan ke login
-  // supaya tidak terjebak di layar "Memuat...".
+  // Belum login, ATAU sesi ada tapi role tidak bisa ditentukan.
+  // Arahkan ke login supaya tidak terjebak di layar "Memuat...".
   if (!isAuthenticated || !role) {
     return (
       <Navigate
         to="/login"
         replace
-        state={{
-          from: location,
-        }}
+        state={{ from: location }}
       />
     );
   }
@@ -89,13 +81,10 @@ const Guards = ({ children, roles = [] }) => {
 export default Guards;
 
 // ======================
-// ROLE REDIRECT
+// ROLE REDIRECT (catch-all "*")
 // ======================
-// Dipakai untuk route catch-all "*" (URL tidak dikenal).
-// - Sudah login  -> diarahkan ke home sesuai role (roleHome).
-// - Belum login  -> diarahkan ke /login.
-// Mencegah user yang sudah login "memantul" lewat /login saat salah URL.
-
+// - Sudah login  -> home sesuai role (roleHome).
+// - Belum login  -> halaman guest (/).
 export const RoleRedirect = () => {
   const { loading, isAuthenticated, role } = useAuth();
 
@@ -104,13 +93,12 @@ export const RoleRedirect = () => {
   if (isAuthenticated && role) {
     return <Navigate to={roleHome(role)} replace />;
   }
-  return <Navigate to="/login" replace />;
+  return <Navigate to="/" replace />;
 };
 
 // ======================
 // ROLE GUARDS
 // ======================
-
 export const AdminGuard = ({ children }) => (
   <Guards roles={[ROLES.ADMIN]}>{children}</Guards>
 );
@@ -126,27 +114,18 @@ export const CustomerGuard = ({ children }) => (
 // ======================
 // PERMISSIONS
 // ======================
-
 export const usePermissions = () => {
   const { role } = useAuth();
 
   return {
     role,
-
     isAdmin: role === ROLES.ADMIN,
-
     isDoctor: role === ROLES.DOCTOR,
-
     isCustomer: role === ROLES.CUSTOMER,
-
     canManageUsers: role === ROLES.ADMIN,
-
     canManageDoctors: role === ROLES.ADMIN,
-
     canManagePatients: role === ROLES.ADMIN || role === ROLES.DOCTOR,
-
     canCreateMedicalRecord: role === ROLES.DOCTOR,
-
     canViewOwnPets: role === ROLES.CUSTOMER,
   };
 };
