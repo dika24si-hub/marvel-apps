@@ -1,3 +1,4 @@
+// src/components/Sidebar.jsx
 import { useState } from "react";
 import {
   FaPaw,
@@ -14,6 +15,8 @@ import {
   FaAngleLeft,
   FaTags,
   FaStar,
+  FaBell,
+  FaCrown,
   FaNotesMedical as FaRegisterPet,
 } from "react-icons/fa";
 
@@ -41,15 +44,43 @@ export default function Sidebar() {
   let support = [];
 
   if (role === "customer") {
-    // Customer (pemilik hewan) hanya melihat:
-    // pembayaran, promosi, dan daftarkan hewan sakit.
+    // Customer (pemilik hewan): Dashboard sebagai halaman utama,
+    // lalu hewan, jadwal, rekam medis, pembayaran.
     general = [
+      {
+        name: t("sidebar.menu.dashboard"),
+        icon: <FaTachometerAlt />,
+        path: "/customer",
+        tip: t("sidebar.tip.dashboard"),
+      },
+      {
+        name: t("sidebar.menu.daftarHewan"),
+        icon: <FaDog />,
+        path: "/customer/daftar-hewan",
+        tip: t("sidebar.tip.daftarHewan"),
+      },
+      {
+        name: t("sidebar.menu.jadwal"),
+        icon: <FaCalendarAlt />,
+        path: "/customer/jadwal",
+        tip: t("sidebar.tip.jadwal"),
+      },
+      {
+        name: t("sidebar.menu.rekamMedis"),
+        icon: <FaNotesMedical />,
+        path: "/customer/rekam-medis",
+        tip: t("sidebar.tip.rekamMedis"),
+      },
       {
         name: t("sidebar.menu.pembayaran"),
         icon: <FaMoneyBillWave />,
         path: "/customer/pembayaran",
         tip: t("sidebar.tip.pembayaran"),
       },
+    ];
+
+    // Loyalty & lainnya masuk ke section "support"
+    support = [
       {
         name: t("sidebar.menu.promosi"),
         icon: <FaTags />,
@@ -57,10 +88,16 @@ export default function Sidebar() {
         tip: t("sidebar.tip.promosi"),
       },
       {
-        name: t("sidebar.menu.daftarHewan"),
-        icon: <FaRegisterPet />,
-        path: "/customer/daftar-hewan",
-        tip: t("sidebar.tip.daftarHewan"),
+        name: "Membership",
+        icon: <FaCrown />,
+        path: "/customer/membership",
+        tip: "Keanggotaan & poin loyalty",
+      },
+      {
+        name: "Notifikasi",
+        icon: <FaBell />,
+        path: "/customer/notifikasi",
+        tip: "Pusat pengingat",
       },
       {
         name: t("sidebar.menu.ulasanDokter"),
@@ -69,8 +106,6 @@ export default function Sidebar() {
         tip: t("sidebar.tip.ulasanDokter"),
       },
     ];
-
-    support = [];
   } else if (role === "doctor") {
     // Dokter hanya melihat menu Jadwal Periksa.
     general = [
@@ -142,7 +177,7 @@ export default function Sidebar() {
     <Tooltip key={idx} content={menu.tip} side="right">
       <NavLink
         to={menu.path}
-        end={menu.path === "/"}
+        end={menu.path === "/" || menu.path === "/customer"}
         className={({ isActive }) =>
           isActive ? "menu-item active" : "menu-item"
         }
@@ -184,7 +219,7 @@ export default function Sidebar() {
       <div className="menu-section">{t("sidebar.sections.general")}</div>
       <nav className="menu">{general.map(renderItem)}</nav>
 
-      {/* SUPPORT — hanya admin & dokter */}
+      {/* SUPPORT — hanya admin, dokter & customer */}
       {support.length > 0 && (
         <>
           <div className="menu-section">{t("sidebar.sections.support")}</div>

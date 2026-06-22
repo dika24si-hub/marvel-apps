@@ -1,346 +1,172 @@
-import { useEffect, useState } from "react";
+// src/pages/customer/CustomerDaftarHewan.jsx
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  FaPaw,
-  FaDog,
-  FaCheckCircle,
-  FaNotesMedical,
-  FaTrash,
-  FaExclamationCircle,
+  FaPaw, FaDog, FaCheckCircle, FaPlusCircle, FaTrash, FaChevronRight,
 } from "react-icons/fa";
 
-import { useLang } from "../../i18n/LanguageContext";
-import { useAuth } from "../../context/AuthContext";
-import {
-  getPetsByOwner,
-  createPet,
-  deletePet,
-} from "../../lib/services";
+import { PageHeader, Card, Input, Button } from "../../components/ui";
+import PetPhoto from "../../components/customer/PetPhoto";
+import { useCustomerData } from "../../context/CustomerDataContext";
+import "./customer.css";
 
-import {
-  PageHeader,
-  Card,
-  Input,
-  Button,
-  Badge,
-  Table,
-  EmptyState,
-  Tag,
-} from "../../components/ui";
+const HEALTH = {
+  healthy:  { label: "Sehat",            cls: "ok" },
+  recovery: { label: "Kontrol Lanjutan", cls: "warn" },
+  sick:     { label: "Perlu Perhatian",  cls: "bad" },
+};
+const VAC = {
+  lengkap: { label: "Vaksin Lengkap", cls: "ok" },
+  parsial: { label: "Vaksin Parsial", cls: "warn" },
+  belum:   { label: "Belum Vaksin",   cls: "bad" },
+};
 
-const STATUS_VARIANT = {
-  Pending: "warning",
-  Diterima: "info",
-  Selesai: "success",
-  Dibatalkan: "danger",
+const EMPTY = {
+  name: "", species: "Kucing", breed: "", ageText: "", weightKg: "",
+  photo: "", vaccineStatus: "belum", healthStatus: "healthy", complaint: "",
 };
 
 export default function CustomerDaftarHewan() {
-  const { t } = useLang();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { pets, addPet, removePet } = useCustomerData();
 
-  const [form, setForm] = useState({
-    nama: "",
-    jenis: "Kucing",
-    ras: "",
-    umur: "",
-    keluhan: "",
-  });
-
+  const [form, setForm] = useState(EMPTY);
   const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
-  const [list, setList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
 
-  const handleChange = (key, value) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const change = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  // ==========================
-  // LOAD DATA
-  // ==========================
-  const loadPets = async () => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      const data = await getPetsByOwner(user.id);
-      setList(data);
-    } catch (err) {
-      setError(err.message || "Gagal memuat data hewan");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadPets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // ==========================
-  // CREATE
-  // ==========================
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!user) return;
-
-    setError("");
-    setSuccess("");
-    setSubmitting(true);
-
-    try {
-      const created = await createPet({
-        owner_id: user.id,
-        nama: form.nama,
-        jenis: form.jenis,
-        ras: form.ras,
-        umur: form.umur,
-        keluhan: form.keluhan,
-        status: "Pending",
-      });
-
-      setList((prev) => [created, ...prev]);
-
-      setSuccess(
-        `Pendaftaran "${form.nama}" berhasil dikirim. Tim klinik akan menghubungi Anda.`
-      );
-
-      setForm({
-        nama: "",
-        jenis: "Kucing",
-        ras: "",
-        umur: "",
-        keluhan: "",
-      });
-
-      setTimeout(() => setSuccess(""), 4000);
-    } catch (err) {
-      setError(err.message || "Gagal mendaftarkan hewan");
-    } finally {
-      setSubmitting(false);
-    }
+    const pet = addPet(form);
+    setSuccess(`"${pet.name}" berhasil ditambahkan.`);
+    setForm(EMPTY);
+    setTimeout(() => setSuccess(""), 4000);
   };
 
-  // ==========================
-  // DELETE
-  // ==========================
-  const handleDelete = async (id) => {
-    setError("");
-    setDeletingId(id);
-    try {
-      await deletePet(id);
-      setList((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      setError(err.message || "Gagal menghapus data");
-    } finally {
-      setDeletingId(null);
-    }
+  const handleDelete = (e, id, name) => {
+    e.stopPropagation();
+    if (window.confirm(`Hapus data "${name}"?`)) removePet(id);
   };
 
   return (
     <div>
       <PageHeader
-        title={t("sidebar.menu.daftarHewan")}
-        subtitle={t("sidebar.tip.daftarHewan")}
+        title="Hewan Peliharaan"
+        subtitle="Tambah & kelola data hewan peliharaanmu."
       />
 
       {success && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "12px 16px",
-            borderRadius: 10,
-            background: "#dcfce7",
-            color: "#15803d",
-            fontSize: 13,
-            margin: "14px 0",
-          }}
-        >
-          <FaCheckCircle />
-          <span>{success}</span>
+        <div className="dh-alert">
+          <FaCheckCircle /> <span>{success}</span>
         </div>
       )}
 
-      {error && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "12px 16px",
-            borderRadius: 10,
-            background: "#fee2e2",
-            color: "#b91c1c",
-            fontSize: 13,
-            margin: "14px 0",
-          }}
-        >
-          <FaExclamationCircle />
-          <span>{error}</span>
-        </div>
-      )}
+      <div className="dh-layout">
+        {/* ---------- Form tambah hewan ---------- */}
+        <Card title="Tambah Hewan" subtitle="Lengkapi data hewan peliharaanmu.">
+          <form className="dh-form" onSubmit={handleSubmit}>
+            <Input
+              label="Nama Hewan"
+              placeholder="Mis. Milo"
+              value={form.name}
+              onChange={(e) => change("name", e.target.value)}
+              leftIcon={<FaPaw />}
+              required
+            />
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr)",
-          gap: 16,
-          marginTop: 14,
-        }}
-      >
-        <Card
-          title="Form Pendaftaran Hewan Sakit"
-          subtitle="Isi data hewan peliharaan Anda yang membutuhkan perawatan."
-        >
-          <form
-            onSubmit={handleSubmit}
-            style={{ display: "flex", flexDirection: "column", gap: 14 }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: 14,
-              }}
-            >
-              <Input
-                label="Nama Hewan"
-                placeholder="Mis. Milo"
-                value={form.nama}
-                onChange={(e) => handleChange("nama", e.target.value)}
-                leftIcon={<FaPaw />}
-                required
-              />
-
+            <div className="dh-row">
               <div className="ui-field">
-                <label className="ui-label">{t("table.jenis")}</label>
-                <select
-                  className="ui-input"
-                  value={form.jenis}
-                  onChange={(e) => handleChange("jenis", e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: "1px solid #e5e9e2",
-                    fontSize: 13,
-                  }}
-                >
-                  <option value="Kucing">{t("jenis.Kucing")}</option>
-                  <option value="Anjing">{t("jenis.Anjing")}</option>
+                <label className="ui-label">Jenis</label>
+                <select className="dh-select" value={form.species}
+                  onChange={(e) => change("species", e.target.value)}>
+                  <option value="Kucing">Kucing</option>
+                  <option value="Anjing">Anjing</option>
+                  <option value="Lainnya">Lainnya</option>
                 </select>
               </div>
-
-              <Input
-                label={t("table.jenisRas")}
-                placeholder="Mis. Persia"
-                value={form.ras}
-                onChange={(e) => handleChange("ras", e.target.value)}
-                leftIcon={<FaDog />}
-              />
-
-              <Input
-                label={t("table.umur")}
-                placeholder="Mis. 2 tahun"
-                value={form.umur}
-                onChange={(e) => handleChange("umur", e.target.value)}
-              />
+              <Input label="Ras" placeholder="Mis. Persia" value={form.breed}
+                onChange={(e) => change("breed", e.target.value)} leftIcon={<FaDog />} />
             </div>
+
+            <div className="dh-row">
+              <Input label="Usia" placeholder="Mis. 2 Tahun" value={form.ageText}
+                onChange={(e) => change("ageText", e.target.value)} />
+              <Input label="Berat (kg)" type="number" placeholder="Mis. 4.2" value={form.weightKg}
+                onChange={(e) => change("weightKg", e.target.value)} />
+            </div>
+
+            <div className="dh-row">
+              <div className="ui-field">
+                <label className="ui-label">Status Kesehatan</label>
+                <select className="dh-select" value={form.healthStatus}
+                  onChange={(e) => change("healthStatus", e.target.value)}>
+                  <option value="healthy">Sehat</option>
+                  <option value="recovery">Kontrol Lanjutan</option>
+                  <option value="sick">Perlu Perhatian</option>
+                </select>
+              </div>
+              <div className="ui-field">
+                <label className="ui-label">Status Vaksin</label>
+                <select className="dh-select" value={form.vaccineStatus}
+                  onChange={(e) => change("vaccineStatus", e.target.value)}>
+                  <option value="lengkap">Lengkap</option>
+                  <option value="parsial">Parsial</option>
+                  <option value="belum">Belum</option>
+                </select>
+              </div>
+            </div>
+
+            <Input label="URL Foto (opsional)" placeholder="https://..."
+              value={form.photo} onChange={(e) => change("photo", e.target.value)} />
 
             <div className="ui-field">
-              <label className="ui-label">Keluhan / Gejala</label>
-              <textarea
-                value={form.keluhan}
-                onChange={(e) => handleChange("keluhan", e.target.value)}
-                placeholder="Ceritakan kondisi atau gejala yang dialami hewan Anda..."
-                required
-                rows={4}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #e5e9e2",
-                  fontSize: 13,
-                  resize: "vertical",
-                  fontFamily: "inherit",
-                }}
-              />
+              <label className="ui-label">Catatan / Keluhan (opsional)</label>
+              <textarea className="dh-textarea" rows={3} value={form.complaint}
+                onChange={(e) => change("complaint", e.target.value)}
+                placeholder="Kondisi atau keluhan hewan..." />
             </div>
 
-            <div>
-              <Button
-                type="submit"
-                variant="primary"
-                leftIcon={<FaNotesMedical />}
-                loading={submitting}
-              >
-                {submitting ? "Menyimpan..." : "Daftarkan Hewan"}
-              </Button>
-            </div>
+            <Button type="submit" variant="primary" leftIcon={<FaPlusCircle />}>
+              Tambahkan Hewan
+            </Button>
           </form>
         </Card>
 
-        <Card
-          title="Riwayat Pendaftaran"
-          subtitle={`${list.length} ${t("common.data")}`}
-        >
-          <Table
-            rowKey="id"
-            data={list}
-            empty={
-              <EmptyState
-                title={loading ? "Memuat data..." : "Belum ada pendaftaran"}
-                description={
-                  loading
-                    ? "Mohon tunggu sebentar."
-                    : "Hewan yang Anda daftarkan akan muncul di sini."
-                }
-              />
-            }
-            columns={[
-              {
-                key: "nama",
-                header: t("table.hewan"),
-                render: (r) => <b>{r.nama}</b>,
-              },
-              {
-                key: "jenis",
-                header: t("table.jenis"),
-                render: (r) => (
-                  <Tag color="brand">{t(`jenis.${r.jenis}`)}</Tag>
-                ),
-              },
-              { key: "ras", header: t("table.jenisRas") },
-              { key: "keluhan", header: "Keluhan" },
-              {
-                key: "status",
-                header: t("table.status"),
-                render: (r) => (
-                  <Badge variant={STATUS_VARIANT[r.status] || "warning"}>
-                    {t(`status.${r.status}`)}
-                  </Badge>
-                ),
-              },
-              {
-                key: "act",
-                header: t("common.action"),
-                align: "right",
-                render: (r) => (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    leftIcon={<FaTrash />}
-                    loading={deletingId === r.id}
-                    onClick={() => handleDelete(r.id)}
-                  >
-                    Hapus
-                  </Button>
-                ),
-              },
-            ]}
-          />
+        {/* ---------- Daftar hewan (kartu) ---------- */}
+        <Card title="Daftar Hewan" subtitle={`${pets.length} hewan terdaftar`}>
+          {pets.length === 0 ? (
+            <p className="dh-empty">Belum ada hewan. Tambahkan lewat form di samping.</p>
+          ) : (
+            <div className="dh-grid">
+              {pets.map((p) => {
+                const h = HEALTH[p.healthStatus] ?? HEALTH.healthy;
+                const v = VAC[p.vaccineStatus] ?? VAC.belum;
+                return (
+                  <div key={p.id} className="dh-pet" onClick={() => navigate(`/customer/hewan/${p.id}`)}>
+                    <PetPhoto photo={p.photo} name={p.name} className="dh-pet-photo" />
+                    <div className="dh-pet-body">
+                      <div className="dh-pet-top">
+                        <div>
+                          <div className="dh-pet-name">{p.name}</div>
+                          <div className="dh-pet-breed">{p.species} • {p.breed}</div>
+                        </div>
+                        <button className="dh-pet-del" title="Hapus"
+                          onClick={(e) => handleDelete(e, p.id, p.name)}>
+                          <FaTrash />
+                        </button>
+                      </div>
+                      <div className="dh-pet-tags">
+                        <span>Usia: {p.ageText}</span>
+                        <span className={`dh-tag ${h.cls}`}>{h.label}</span>
+                        <span className={`dh-tag ${v.cls}`}>{v.label}</span>
+                      </div>
+                      <div className="dh-pet-link">Lihat detail <FaChevronRight /></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       </div>
     </div>

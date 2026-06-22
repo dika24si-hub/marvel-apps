@@ -1,8 +1,4 @@
-import {
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 import {
   lazy,
@@ -10,10 +6,11 @@ import {
 } from "react";
 
 import MainLayout from "../layouts/MainLayout";
+import CustomerLayout from "../layouts/CustomerLayout";
 
 
 import Loading from "../components/Loading";
-import Guards, { ROLES } from "./guards";
+import Guards, { ROLES, RoleRedirect } from "./guards";
 
 // ======================
 // PAGES — ADMIN & DOKTER
@@ -40,8 +37,24 @@ const CustomerPromosi = lazy(() =>
 const CustomerDaftarHewan = lazy(() =>
   import("../pages/customer/CustomerDaftarHewan")
 );
+const PetDetail = lazy(() => import("../pages/customer/PetDetail"));
 const CustomerUlasanDokter = lazy(() =>
   import("../pages/customer/CustomerUlasanDokter")
+);
+const CustomerJadwal = lazy(() =>
+  import("../pages/customer/CustomerJadwal")
+);
+const CustomerRekamMedis = lazy(() =>
+  import("../pages/customer/CustomerRekamMedis")
+);
+const CustomerPembayaran = lazy(() =>
+  import("../pages/customer/CustomerPembayaran")
+);
+const CustomerKeanggotaan = lazy(() =>
+  import("../pages/customer/CustomerKeanggotaan")
+);
+const CustomerNotifikasi = lazy(() =>
+  import("../pages/customer/CustomerNotifikasi")
 );
 
 // ======================
@@ -49,6 +62,8 @@ const CustomerUlasanDokter = lazy(() =>
 // ======================
 
 const AuthSlider = lazy(() => import("../pages/auth/AuthSlider"));
+const GuestHome = lazy(() => import("../pages/guest/GuestHome"));
+
 
 
 export default function AppRouter() {
@@ -86,46 +101,40 @@ export default function AppRouter() {
           <Route path="/doctor/jadwal" element={<Jadwal />} />
         </Route>
 
-        {/* ============================= */}
-        {/* CUSTOMER ROUTES               */}
-        {/* ============================= */}
-        <Route
-          element={
-            <Guards roles={[ROLES.CUSTOMER]}>
-              <MainLayout />
-            </Guards>
-          }
-        >
-          <Route
-            path="/customer/pembayaran"
-            element={<DashboardCustomer />}
-          />
-          <Route
-            path="/customer/promosi"
-            element={<CustomerPromosi />}
-          />
-          <Route
-            path="/customer/daftar-hewan"
-            element={<CustomerDaftarHewan />}
-          />
-          <Route
-            path="/customer/ulasan-dokter"
-            element={<CustomerUlasanDokter />}
-          />
-        </Route>
-
+       {/* ============================= */}
+{/* CUSTOMER ROUTES               */}
+{/* ============================= */}
+<Route
+  element={
+    <Guards roles={[ROLES.CUSTOMER]}>
+      <CustomerLayout />
+    </Guards>
+  }
+>
+  {/* index -> Dashboard */}
+  <Route path="/customer" element={<DashboardCustomer />} />
+  <Route path="/customer/daftar-hewan" element={<CustomerDaftarHewan />} />
+  <Route path="/customer/hewan/:id" element={<PetDetail />} />
+  <Route path="/customer/jadwal" element={<CustomerJadwal />} />
+  <Route path="/customer/rekam-medis" element={<CustomerRekamMedis />} />
+  <Route path="/customer/pembayaran" element={<CustomerPembayaran />} />
+  <Route path="/customer/promosi" element={<CustomerPromosi />} />
+  <Route path="/customer/membership" element={<CustomerKeanggotaan />} />
+  <Route path="/customer/notifikasi" element={<CustomerNotifikasi />} />
+  <Route path="/customer/ulasan-dokter" element={<CustomerUlasanDokter />} />
+</Route>
+{/* ============================= */}
+{/* GUEST / PUBLIC ROUTES         */}
+{/* ============================= */}
+<Route path="/guest" element={<GuestHome />} />
         {/* ============================= */}
         {/* AUTH ROUTES                   */}
         {/* ============================= */}
         <Route path="/login" element={<AuthSlider />} />
         <Route path="/register" element={<AuthSlider />} />
 
-
-        {/* NOT FOUND */}
-        <Route
-          path="*"
-          element={<Navigate to="/login" replace />}
-        />
+        {/* NOT FOUND — arahkan sesuai status login & role */}
+        <Route path="*" element={<RoleRedirect />} />
       </Routes>
     </Suspense>
   );
