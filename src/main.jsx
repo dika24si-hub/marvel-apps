@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 
 import "./index.css";
+import "./styles/design-system.css";
 import "./App.css";
 import "./components/ui/ui.css";
 import "./components/shadcn/shadcn.css";

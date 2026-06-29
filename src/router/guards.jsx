@@ -21,7 +21,7 @@ export const ROLES = {
 // Belum login / tidak dikenali -> halaman guest (/)
 export const roleHome = (role) => {
   if (role === ROLES.CUSTOMER) return "/customer";
-  if (role === ROLES.DOCTOR) return "/doctor/jadwal";
+  if (role === ROLES.DOCTOR) return "/doctor";
   if (role === ROLES.ADMIN) return "/admin";
   return "/";
 };

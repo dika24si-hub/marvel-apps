@@ -1,5 +1,6 @@
 // src/pages/customer/DashboardCustomer.jsx
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
   FaBell, FaPaw, FaCalendarAlt, FaClipboardList, FaCreditCard, FaSyringe,
   FaPlusCircle, FaChevronRight, FaCalendarCheck, FaRegClock,
@@ -8,10 +9,11 @@ import {
 import fotoDika from "../../assets/dika.jpg";
 import { useAuth } from "../../context/AuthContext";
 import { useCustomerData } from "../../context/CustomerDataContext";
+import NpsSurvey from "../../components/customer/NpsSurvey";
 import {
-  dummyPayments, dummyMemberStats, dummyMembership, dummyVaccineReminders,
+  dummyPayments, dummyVaccineReminders,
 } from "../../data/dummyCustomer";
-import { evaluateMembership } from "../../data/membership";
+import { getLoyalty, LOYALTY_TIERS, runMemberTriggers } from "../../lib/services";
 import "./customer.css";
 
 const fullDate = (iso) =>
@@ -34,12 +36,27 @@ const QUICK = [
 
 export default function DashboardCustomer() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { pets, appointments } = useCustomerData();
 
   const firstName = (profile?.full_name || "Dika").split(" ")[0];
-  const { current } = evaluateMembership(dummyMemberStats);
-  const tier = current ?? { label: "Member", medal: "🐾" };
+
+  // Loyalty nyata dari Supabase.
+  const [loyalty, setLoyalty] = useState({ total: 0, tier: LOYALTY_TIERS[0] });
+  useEffect(() => {
+    if (!user?.id) return;
+    getLoyalty(user.id)
+      .then(setLoyalty)
+      .catch((e) => console.error("Gagal memuat loyalty:", e.message));
+    // Jalankan trigger CRM otomatis (PRD 10.4): reminder kontrol & win-back.
+    runMemberTriggers(user.id);
+  }, [user?.id]);
+
+  const tierMedal = { silver: "🥈", gold: "🥇", platinum: "💎" };
+  const tier = {
+    label: `${loyalty.tier.label} Member`,
+    medal: tierMedal[loyalty.tier.key] ?? "🐾",
+  };
 
   const upcoming = appointments
     .filter((a) => a.status === "upcoming")
@@ -76,7 +93,7 @@ export default function DashboardCustomer() {
           <span className="dx-tier-medal">{tier.medal}</span>
           <span>
             <b>{tier.label}</b>
-            <em>{dummyMembership.points.toLocaleString("id-ID")} poin</em>
+            <em>{loyalty.total.toLocaleString("id-ID")} poin</em>
           </span>
         </button>
       </section>
@@ -90,6 +107,9 @@ export default function DashboardCustomer() {
           </button>
         ))}
       </section>
+
+      {/* NPS Survey (PRD 10.5) */}
+      <NpsSurvey email={profile?.email} />
 
       {/* 4 : Ringkasan Akun */}
       <section className="dx-stats">

@@ -28,16 +28,20 @@ const EMPTY = {
 
 export default function CustomerDaftarHewan() {
   const navigate = useNavigate();
-  const { pets, addPet, removePet } = useCustomerData();
+  const { pets, addPet, removePet, loading } = useCustomerData();
 
   const [form, setForm] = useState(EMPTY);
   const [success, setSuccess] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const change = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const pet = addPet(form);
+    setSaving(true);
+    const pet = await addPet(form);
+    setSaving(false);
+    if (!pet) return;
     setSuccess(`"${pet.name}" berhasil ditambahkan.`);
     setForm(EMPTY);
     setTimeout(() => setSuccess(""), 4000);
@@ -126,15 +130,17 @@ export default function CustomerDaftarHewan() {
                 placeholder="Kondisi atau keluhan hewan..." />
             </div>
 
-            <Button type="submit" variant="primary" leftIcon={<FaPlusCircle />}>
-              Tambahkan Hewan
+            <Button type="submit" variant="primary" leftIcon={<FaPlusCircle />} loading={saving}>
+              {saving ? "Menyimpan..." : "Tambahkan Hewan"}
             </Button>
           </form>
         </Card>
 
         {/* ---------- Daftar hewan (kartu) ---------- */}
         <Card title="Daftar Hewan" subtitle={`${pets.length} hewan terdaftar`}>
-          {pets.length === 0 ? (
+          {loading ? (
+            <p className="dh-empty">Memuat data hewan...</p>
+          ) : pets.length === 0 ? (
             <p className="dh-empty">Belum ada hewan. Tambahkan lewat form di samping.</p>
           ) : (
             <div className="dh-grid">

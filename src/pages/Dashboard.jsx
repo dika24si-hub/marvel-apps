@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   FaPlus,
   FaArrowUp,
@@ -16,6 +17,9 @@ import {
   FaDog,
   FaCat,
   FaStethoscope,
+  FaUsers,
+  FaCalendarCheck,
+  FaCheckCircle,
 } from "react-icons/fa";
 import {
   ResponsiveContainer,
@@ -34,6 +38,18 @@ import {
   TabsTrigger,
   TabsContent,
 } from "../components/shadcn";
+import { getAdminStats } from "../lib/services";
+
+const STATUS_LABEL = {
+  PENDING: { label: "Menunggu", pill: "pending" },
+  CONFIRMED: { label: "Dikonfirmasi", pill: "pending" },
+  COMPLETED: { label: "Selesai", pill: "success" },
+  CANCELLED: { label: "Dibatalkan", pill: "pending" },
+  NO_SHOW: { label: "Tidak Hadir", pill: "pending" },
+};
+
+const fmtTime = (iso) =>
+  iso ? new Date(iso).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-";
 
 // Statistik kunjungan harian (visit & treatment)
 const visitData = [
@@ -74,6 +90,21 @@ const dailyData = [
 
 export default function Dashboard() {
   const { t } = useLang();
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    getAdminStats()
+      .then(setStats)
+      .catch((err) => console.error("Gagal memuat statistik:", err.message));
+  }, []);
+
+  // Aktivitas terbaru = 5 appointment terakhir dibuat.
+  const recentAppts = useMemo(() => {
+    if (!stats) return [];
+    return [...stats.appointments]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 5);
+  }, [stats]);
 
   // Helper render bar chart (dipakai di kedua tab Mingguan & Harian)
   const renderChart = (data) => (
@@ -107,47 +138,8 @@ export default function Dashboard() {
     </ResponsiveContainer>
   );
 
-  const activities = [
-    {
-      id: 1,
-      type: "in",
-      icon: <FaCat />,
-      name: "Milo",
-      sub: t("activities.sub.milo"),
-      service: t("activities.vaksin"),
-      serviceSub: "08:30 WIB",
-      status: t("activities.selesai"),
-      pillVariant: "success",
-      doctor: "Dr. Dika",
-      doctorSub: t("sidebar.role"),
-    },
-    {
-      id: 2,
-      type: "out",
-      icon: <FaDog />,
-      name: "Rocky",
-      sub: t("activities.sub.rocky"),
-      service: t("activities.operasi"),
-      serviceSub: "10:00 WIB",
-      status: t("activities.proses"),
-      pillVariant: "pending",
-      doctor: "Dr. Felix",
-      doctorSub: t("sidebar.role"),
-    },
-    {
-      id: 3,
-      type: "in",
-      icon: <FaCat />,
-      name: "Luna",
-      sub: t("activities.sub.luna"),
-      service: t("activities.checkup"),
-      serviceSub: "13:15 WIB",
-      status: t("activities.selesai"),
-      pillVariant: "success",
-      doctor: "Dr. Kiran",
-      doctorSub: t("sidebar.role"),
-    },
-  ];
+  const activities = [];
+  void activities;
 
   return (
     <div>
@@ -157,9 +149,9 @@ export default function Dashboard() {
           <div className="balance-info">
             <p>{t("dashboard.heroLabel")}</p>
             <h2>
-              Rp 320.845.200
+              {stats?.totalAppointments ?? 0} Janji Temu
               <span className="delta">
-                <FaArrowUp /> 15.8%
+                <FaArrowUp /> {stats?.byStatus?.COMPLETED ?? 0} selesai
               </span>
             </h2>
           </div>
@@ -218,90 +210,89 @@ export default function Dashboard() {
         <div className="kpi-stack">
           <div className="kpi-card">
             <div className="kpi-icon green">
-              <FaPaw />
+              <FaUsers />
             </div>
-            <div className="label">{t("dashboard.kpiPasien")}</div>
+            <div className="label">Total Member</div>
             <div className="value">
-              218
-              <ScTooltip content="Naik 45% dibanding bulan lalu" side="top">
+              {stats?.totalMembers ?? "—"}
+              <ScTooltip content={`${stats?.newMembersThisMonth ?? 0} member baru bulan ini`} side="top">
                 <span className="delta-up" style={{ marginLeft: 8 }}>
-                  <FaArrowUp /> 45.0%
+                  <FaArrowUp /> +{stats?.newMembersThisMonth ?? 0}
                 </span>
               </ScTooltip>
             </div>
             <small style={{ color: "#7a857f", fontSize: 11.5, marginTop: 4 }}>
-              {t("dashboard.kpiPasienHelp")}
+              member terdaftar
             </small>
           </div>
 
           <div className="kpi-card">
             <div className="kpi-icon red">
-              <FaSyringe />
+              <FaCalendarCheck />
             </div>
-            <div className="label">{t("dashboard.kpiVaksin")}</div>
+            <div className="label">Total Janji Temu</div>
             <div className="value">
-              74
-              <ScTooltip content="Turun 12.5% dibanding bulan lalu" side="top">
-                <span className="delta-down" style={{ marginLeft: 8 }}>
-                  <FaArrowDown /> 12.5%
+              {stats?.totalAppointments ?? "—"}
+              <ScTooltip content={`${stats?.byStatus?.PENDING ?? 0} menunggu konfirmasi`} side="top">
+                <span className="delta-up" style={{ marginLeft: 8 }}>
+                  <FaCalendarCheck /> {stats?.byStatus?.PENDING ?? 0}
                 </span>
               </ScTooltip>
             </div>
             <small style={{ color: "#7a857f", fontSize: 11.5, marginTop: 4 }}>
-              {t("dashboard.kpiVaksinHelp")}
+              semua waktu
             </small>
           </div>
         </div>
       </div>
 
-      {/* 3 CARDS – stat klinik */}
+      {/* 3 CARDS – stat klinik (data nyata) */}
       <div className="account-grid">
         <div className="account-card">
           <div className="account-head">
             <div className="title">
-              <FaPaw /> {t("dashboard.cardPasienAktif")}
+              <FaUserMd /> Dokter Aktif
             </div>
-            <small>{t("common.last30")}</small>
+            <small>Total {stats?.totalDoctors ?? 0}</small>
           </div>
           <div className="account-value">
-            148
+            {stats?.activeDoctors ?? "—"}
             <span className="delta-up">
-              <FaArrowUp /> 16.0%
+              <FaCheckCircle />
             </span>
           </div>
-          <div className="account-prev">{t("common.vsLastPeriod")}: 128</div>
+          <div className="account-prev">dari {stats?.totalDoctors ?? 0} dokter terdaftar</div>
         </div>
 
         <div className="account-card">
           <div className="account-head">
             <div className="title">
-              <FaProcedures /> {t("dashboard.cardOperasi")}
+              <FaPaw /> Hewan Terdaftar
             </div>
-            <small>{t("common.last30")}</small>
+            <small>Total pasien</small>
           </div>
           <div className="account-value">
-            36
-            <span className="delta-down">
-              <FaArrowDown /> 8.2%
-            </span>
+            {stats?.totalPets ?? "—"}
           </div>
-          <div className="account-prev">{t("common.vsLastPeriod")}: 39</div>
+          <div className="account-prev">hewan dari semua member</div>
         </div>
 
         <div className="account-card">
           <div className="account-head">
             <div className="title">
-              <FaSyringe /> {t("dashboard.cardVaksinLengkap")}
+              <FaProcedures /> Janji Selesai
             </div>
-            <small>{t("common.last30")}</small>
+            <small>Status COMPLETED</small>
           </div>
           <div className="account-value">
-            92
+            {stats?.byStatus?.COMPLETED ?? "—"}
             <span className="delta-up">
-              <FaArrowUp /> 35.2%
+              <FaArrowUp />
             </span>
           </div>
-          <div className="account-prev">{t("common.vsLastPeriod")}: 68</div>
+          <div className="account-prev">
+            {stats?.byStatus?.CANCELLED ?? 0} dibatalkan
+          </div>
         </div>
       </div>
 
@@ -329,45 +320,56 @@ export default function Dashboard() {
           <table>
             <thead>
               <tr>
-                <th>{t("dashboard.tableType")}</th>
-                <th>{t("dashboard.tableLayanan")}</th>
-                <th>{t("dashboard.tableStatus")}</th>
-                <th>{t("dashboard.tableDokter")}</th>
+                <th>Pasien</th>
+                <th>Keperluan</th>
+                <th>Status</th>
+                <th>Dokter</th>
               </tr>
             </thead>
             <tbody>
-              {activities.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <div className="act-type">
-                      <div className={`act-icon ${a.type}`}>{a.icon}</div>
-                      <div>
-                        <span className="name">{a.name}</span>
-                        <span className="sub">{a.sub}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div>
-                      <b style={{ fontSize: 13 }}>{a.service}</b>
-                      <small style={{ display: "block", color: "#7a857f", fontSize: 11 }}>
-                        {a.serviceSub}
-                      </small>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`pill ${a.pillVariant}`}>{a.status}</span>
-                  </td>
-                  <td>
-                    <div>
-                      <b style={{ fontSize: 13 }}>{a.doctor}</b>
-                      <small style={{ display: "block", color: "#7a857f", fontSize: 11 }}>
-                        {a.doctorSub}
-                      </small>
-                    </div>
+              {recentAppts.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ padding: 24, textAlign: "center", color: "#94a3b8" }}>
+                    Belum ada aktivitas janji temu.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                recentAppts.map((a) => {
+                  const st = STATUS_LABEL[a.status] ?? { label: a.status, pill: "pending" };
+                  return (
+                    <tr key={a.id}>
+                      <td>
+                        <div className="act-type">
+                          <div className="act-icon in"><FaPaw /></div>
+                          <div>
+                            <span className="name">{a.pet_name || "Hewan"}</span>
+                            <span className="sub">{fmtTime(a.created_at)}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div>
+                          <b style={{ fontSize: 13 }}>{a.complaint || "Pemeriksaan"}</b>
+                          <small style={{ display: "block", color: "#7a857f", fontSize: 11 }}>
+                            {fmtTime(a.scheduled_at)}
+                          </small>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`pill ${st.pill}`}>{st.label}</span>
+                      </td>
+                      <td>
+                        <div>
+                          <b style={{ fontSize: 13 }}>{a.doctor_name || "-"}</b>
+                          <small style={{ display: "block", color: "#7a857f", fontSize: 11 }}>
+                            Dokter Hewan
+                          </small>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

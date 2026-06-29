@@ -1,5 +1,4 @@
 // src/components/Sidebar.jsx
-import { useState } from "react";
 import {
   FaPaw,
   FaTachometerAlt,
@@ -10,14 +9,17 @@ import {
   FaMoneyBillWave,
   FaSignOutAlt,
   FaCog,
-  FaQuestionCircle,
   FaAngleDown,
   FaAngleLeft,
   FaTags,
   FaStar,
   FaBell,
   FaCrown,
-  FaNotesMedical as FaRegisterPet,
+  FaUsers,
+  FaBullhorn,
+  FaLayerGroup,
+  FaChartLine,
+  FaCommentDots,
 } from "react-icons/fa";
 
 import { NavLink, useNavigate } from "react-router-dom";
@@ -33,8 +35,6 @@ export default function Sidebar() {
   const { t } = useLang();
 
   const { role, user, profile, logout } = useAuth();
-
-  const [proMode, setProMode] = useState(true);
 
   // ==========================
   // MENU BERDASARKAN ROLE
@@ -107,25 +107,68 @@ export default function Sidebar() {
       },
     ];
   } else if (role === "doctor") {
-    // Dokter hanya melihat menu Jadwal Periksa.
+    // Dokter: dashboard, jadwal, pasien, rekam medis, konsultasi, laporan.
     general = [
+      {
+        name: t("sidebar.menu.dashboard"),
+        icon: <FaTachometerAlt />,
+        path: "/doctor",
+        tip: "Ringkasan praktik",
+      },
       {
         name: t("sidebar.menu.jadwal"),
         icon: <FaCalendarAlt />,
         path: "/doctor/jadwal",
         tip: t("sidebar.tip.jadwal"),
       },
+      {
+        name: "Pasien",
+        icon: <FaDog />,
+        path: "/doctor/pasien",
+        tip: "Data hewan & pemilik",
+      },
+      {
+        name: t("sidebar.menu.rekamMedis"),
+        icon: <FaNotesMedical />,
+        path: "/doctor/rekam-medis",
+        tip: t("sidebar.tip.rekamMedis"),
+      },
     ];
 
-    support = [];
+    support = [
+      {
+        name: "Konsultasi",
+        icon: <FaCommentDots />,
+        path: "/doctor/konsultasi",
+        tip: "Inbox konsultasi online",
+      },
+      {
+        name: "Laporan",
+        icon: <FaChartLine />,
+        path: "/doctor/laporan",
+        tip: "Statistik & laporan",
+      },
+      {
+        name: "Profil",
+        icon: <FaUserMd />,
+        path: "/doctor/profil",
+        tip: "Profil dokter",
+      },
+    ];
   } else {
     // Admin melihat menu lengkap (tanpa jadwal — dipindah ke dokter).
     general = [
       {
         name: t("sidebar.menu.dashboard"),
         icon: <FaTachometerAlt />,
-        path: "/",
+        path: "/admin",
         tip: t("sidebar.tip.dashboard"),
+      },
+      {
+        name: "Appointment",
+        icon: <FaCalendarAlt />,
+        path: "/appointment",
+        tip: "Semua janji temu klinik",
       },
       {
         name: t("sidebar.menu.pembayaran"),
@@ -143,6 +186,12 @@ export default function Sidebar() {
 
     support = [
       {
+        name: "Member",
+        icon: <FaUsers />,
+        path: "/member",
+        tip: "Kelola akun pemilik hewan",
+      },
+      {
         name: t("sidebar.menu.dokter"),
         icon: <FaUserMd />,
         path: "/dokter",
@@ -153,6 +202,48 @@ export default function Sidebar() {
         icon: <FaNotesMedical />,
         path: "/rekam-medis",
         tip: t("sidebar.tip.rekamMedis"),
+      },
+      {
+        name: "Layanan & Harga",
+        icon: <FaTags />,
+        path: "/layanan",
+        tip: "Katalog layanan & tarif",
+      },
+      {
+        name: "CRM Analytics",
+        icon: <FaChartLine />,
+        path: "/analytics",
+        tip: "Insight & laporan bisnis",
+      },
+      {
+        name: "Segmentasi RFM",
+        icon: <FaLayerGroup />,
+        path: "/segmentasi",
+        tip: "RFM & lifecycle pelanggan",
+      },
+      {
+        name: "Loyalty",
+        icon: <FaCrown />,
+        path: "/loyalty",
+        tip: "Reward & penukaran poin",
+      },
+      {
+        name: "Kampanye",
+        icon: <FaBullhorn />,
+        path: "/kampanye",
+        tip: "Email campaign & voucher",
+      },
+      {
+        name: "Feedback",
+        icon: <FaStar />,
+        path: "/ulasan",
+        tip: "Ulasan, rating & NPS",
+      },
+      {
+        name: "Pengaturan",
+        icon: <FaCog />,
+        path: "/pengaturan",
+        tip: "Pengaturan sistem & klinik",
       },
     ];
   }
@@ -177,7 +268,7 @@ export default function Sidebar() {
     <Tooltip key={idx} content={menu.tip} side="right">
       <NavLink
         to={menu.path}
-        end={menu.path === "/" || menu.path === "/customer"}
+        end={menu.path === "/admin" || menu.path === "/customer" || menu.path === "/doctor"}
         className={({ isActive }) =>
           isActive ? "menu-item active" : "menu-item"
         }
@@ -229,36 +320,6 @@ export default function Sidebar() {
 
       {/* BOTTOM */}
       <div className="sidebar-bottom">
-        <button type="button" className="menu-item static">
-          <span className="m-icon">
-            <FaCog />
-          </span>
-          <span className="m-label">{t("sidebar.menu.settings")}</span>
-        </button>
-
-        <button type="button" className="menu-item static">
-          <span className="m-icon">
-            <FaQuestionCircle />
-          </span>
-          <span className="m-label">{t("sidebar.menu.help")}</span>
-        </button>
-
-        <div className="pro-mode">
-          <span className="m-icon">⚡</span>
-          <span className="m-label">{t("sidebar.proMode")}</span>
-          <Tooltip
-            content={proMode ? "Pro Mode aktif" : "Pro Mode nonaktif"}
-            side="top"
-          >
-            <button
-              type="button"
-              className={`toggle ${proMode ? "" : "off"}`}
-              onClick={() => setProMode((p) => !p)}
-              aria-label="Toggle Pro Mode"
-            />
-          </Tooltip>
-        </div>
-
         <Tooltip content="Keluar dari akun VetCare" side="right">
           <button
             type="button"

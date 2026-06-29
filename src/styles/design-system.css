@@ -1,0 +1,83 @@
+/* =====================================================================
+   VetCare — UI/UX DESIGN SYSTEM (PRD 14)
+   Token desain: palet warna, tipografi, spacing, radius, shadow.
+   Diimpor global di main.jsx. Komponen lama tetap kompatibel; token ini
+   menyediakan referensi resmi sesuai PRD.
+   ===================================================================== */
+
+/* ---- 14.2 Tipografi: font families ---- */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ---- 14.1 Palet Warna ---- */
+  --ds-primary-green: #1AB8A6;   /* Warna utama brand: CTA utama, heading, navbar */
+  --ds-primary-light: #6BF7EE;   /* Background soft, tag, highlight area */
+  --ds-accent-gold:   #F0A500;   /* Badge tier Gold, highlight poin, promo banner */
+  --ds-neutral-dark:  #1A1A2E;   /* Teks heading, ikon penting */
+  --ds-neutral-mid:   #555555;   /* Teks body, deskripsi */
+  --ds-neutral-light: #F5F5F5;   /* Background extra tabel, input disabled */
+  --ds-danger-red:    #D62828;   /* Error state, tombol hapus, alert kritis */
+  --ds-info-blue:     #1565C0;   /* Badge dokter, info state, link */
+  --ds-white:         #FFFFFF;   /* Background utama, card background */
+
+  /* ---- 14.2 Tipografi: peran ---- */
+  --ds-font-display: 'Plus Jakarta Sans', system-ui, sans-serif; /* Display / Hero, Heading H1-H2 */
+  --ds-font-body:    'Inter', system-ui, sans-serif;             /* Heading H3-H4, Body, Caption */
+  --ds-font-mono:    'JetBrains Mono', ui-monospace, monospace;  /* Monospace (kode, ID) */
+
+  --ds-size-display: 48px;  /* Display / Hero (40-72px) */
+  --ds-size-h1:      36px;  /* Heading H1-H2 (28-40px) */
+  --ds-size-h3:      22px;  /* Heading H3-H4 (20-24px) */
+  --ds-size-body:    16px;  /* Body text (14-16px) */
+  --ds-size-caption: 13px;  /* Caption / Label (11-13px) */
+
+  --ds-weight-display: 800;
+  --ds-weight-heading: 700;
+  --ds-weight-body:    400;
+
+  /* ---- 14.x Spacing (8px grid), radius, shadow ---- */
+  --ds-space-1: 8px;
+  --ds-space-2: 16px;
+  --ds-space-3: 24px;
+  --ds-space-4: 32px;
+  --ds-radius: 20px;
+  --ds-radius-sm: 12px;
+  --ds-shadow-soft-xl: 0 20px 50px rgba(15, 23, 42, 0.12);
+  --ds-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+/* ---- Utility kelas berbasis token (opsional dipakai komponen) ---- */
+.ds-display { font-family: var(--ds-font-display); font-size: var(--ds-size-display); font-weight: var(--ds-weight-display); line-height: 1.1; color: var(--ds-neutral-dark); }
+.ds-h1 { font-family: var(--ds-font-display); font-size: var(--ds-size-h1); font-weight: var(--ds-weight-heading); color: var(--ds-neutral-dark); }
+.ds-h3 { font-family: var(--ds-font-body); font-size: var(--ds-size-h3); font-weight: 600; color: var(--ds-neutral-dark); }
+.ds-body { font-family: var(--ds-font-body); font-size: var(--ds-size-body); font-weight: var(--ds-weight-body); color: var(--ds-neutral-mid); }
+.ds-caption { font-family: var(--ds-font-body); font-size: var(--ds-size-caption); color: var(--ds-neutral-mid); }
+.ds-mono { font-family: var(--ds-font-mono); }
+
+/* ---- Badge tier (14.1 penggunaan accent-gold & info-blue) ---- */
+.ds-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: var(--ds-size-caption); font-weight: 600; }
+.ds-badge-gold     { background: rgba(240, 165, 0, 0.14);  color: var(--ds-accent-gold); }
+.ds-badge-info     { background: rgba(21, 101, 192, 0.12); color: var(--ds-info-blue); }
+.ds-badge-success  { background: rgba(26, 184, 166, 0.14); color: var(--ds-primary-green); }
+.ds-badge-danger   { background: rgba(214, 40, 40, 0.12);  color: var(--ds-danger-red); }
+
+/* ---- Card sesuai design system (radius 20px, soft XL shadow) ---- */
+.ds-card {
+  background: var(--ds-white);
+  border-radius: var(--ds-radius);
+  box-shadow: var(--ds-shadow-soft);
+  padding: var(--ds-space-3);
+}
+
+/* ---- Aksesibilitas (PRD 13): focus ring jelas, kontras ---- */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--ds-primary-green);
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

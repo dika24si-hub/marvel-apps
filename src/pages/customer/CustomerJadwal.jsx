@@ -20,6 +20,7 @@ export default function CustomerJadwal() {
   const [form, setForm] = useState(EMPTY);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const change = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -27,20 +28,23 @@ export default function CustomerJadwal() {
     .filter((a) => a.status === "upcoming")
     .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     if (!form.petId) return setError("Pilih hewan yang akan diperiksa.");
     if (!form.date || !form.time) return setError("Tanggal & jam wajib diisi.");
 
     const pet = pets.find((p) => p.id === form.petId);
-    addAppointment({
+    setSaving(true);
+    const appt = await addAppointment({
       petId: pet.id,
       petName: pet.name,
       doctorName: form.doctorName,
       reason: form.reason,
       dateTime: `${form.date}T${form.time}:00`,
     });
+    setSaving(false);
+    if (!appt) return setError("Gagal membuat booking. Coba lagi.");
 
     setSuccess(`Booking untuk ${pet.name} berhasil dibuat.`);
     setForm(EMPTY);
@@ -96,8 +100,8 @@ export default function CustomerJadwal() {
 
               {error && <p className="dh-error">{error}</p>}
 
-              <Button type="submit" variant="primary" leftIcon={<FaCalendarPlus />}>
-                Buat Booking
+              <Button type="submit" variant="primary" leftIcon={<FaCalendarPlus />} loading={saving}>
+                {saving ? "Memproses..." : "Buat Booking"}
               </Button>
             </form>
           )}
@@ -110,21 +114,29 @@ export default function CustomerJadwal() {
               description="Booking pemeriksaan lewat form di samping." />
           ) : (
             <div className="dh-appt-list">
-              {upcoming.map((a) => (
-                <div key={a.id} className="appt-item">
-                  <div className="appt-left">
-                    <span className="appt-ic"><FaCalendarCheck /></span>
-                    <div>
-                      <p className="appt-title">{a.petName} • {a.reason}</p>
-                      <p className="appt-sub">{a.doctorName} • {fmt(a.dateTime)}</p>
+              {upcoming.map((a) => {
+                const st = a.rawStatus === "CONFIRMED"
+                  ? { label: "Dikonfirmasi", cls: "ok" }
+                  : { label: "Menunggu Konfirmasi", cls: "warn" };
+                return (
+                  <div key={a.id} className="appt-item">
+                    <div className="appt-left">
+                      <span className="appt-ic"><FaCalendarCheck /></span>
+                      <div>
+                        <p className="appt-title">{a.petName} • {a.reason}</p>
+                        <p className="appt-sub">{a.doctorName} • {fmt(a.dateTime)}</p>
+                        <span className={`dh-tag ${st.cls}`} style={{ marginTop: 4, display: "inline-block" }}>
+                          {st.label}
+                        </span>
+                      </div>
                     </div>
+                    <Button size="sm" variant="danger"
+                      onClick={() => cancelAppointment(a.id)}>
+                      Batalkan
+                    </Button>
                   </div>
-                  <Button size="sm" variant="danger"
-                    onClick={() => cancelAppointment(a.id)}>
-                    Batalkan
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>

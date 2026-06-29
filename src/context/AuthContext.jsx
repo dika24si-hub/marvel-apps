@@ -10,9 +10,12 @@ import { supabase } from "../lib/supabase";
 const AuthContext = createContext(undefined);
 
 // =====================================================================
-// AKUN LOKAL (TIDAK PAKAI DATABASE)
-// Hanya customer yang menggunakan Supabase (register/login).
-// Admin & Dokter tidak bisa register, jadi akunnya di-hardcode di sini.
+// AKUN ADMIN LOKAL
+// Admin TIDAK bisa register dari UI. Akun admin disediakan di sini
+// (atau dibuat manual di Supabase lalu set role='admin').
+// Dokter TIDAK ada di sini — akun dokter dibuat oleh admin & tersimpan
+// di Supabase (login dokter lewat Supabase Auth).
+// Member register sendiri lewat Supabase.
 // =====================================================================
 const LOCAL_ACCOUNTS = [
   {
@@ -20,12 +23,6 @@ const LOCAL_ACCOUNTS = [
     password: "admin123",
     role: "admin",
     full_name: "Administrator",
-  },
-  {
-    email: "dokter@gmail.com",
-    password: "dokter123",
-    role: "doctor",
-    full_name: "Dokter",
   },
 ];
 
@@ -252,13 +249,14 @@ export const AuthProvider = ({ children }) => {
   // ==========================
   const register = async (email, password, fullName, phone) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
             phone,
+            role: "customer",
           },
         },
       });
@@ -267,23 +265,64 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: error.message };
       }
 
-      // Profil otomatis dibuat oleh trigger `handle_new_user`.
-      // Fallback upsert jika ada session aktif.
-      if (data.session && data.user) {
-        await supabase.from("profiles").upsert(
-          {
-            id: data.user.id,
-            email,
+      // Profil otomatis dibuat oleh trigger `handle_new_user` di database.
+      // Tidak perlu upsert manual (bisa kena RLS). Cukup andalkan trigger.
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  // ==========================
+  // CREATE DOCTOR (khusus ADMIN)
+  // Admin membuat akun dokter. Memakai client Supabase TERPISAH supaya
+  // proses signUp tidak menimpa sesi admin yang sedang aktif.
+  // Role 'doctor' + baris tabel doctors dibuat otomatis oleh trigger
+  // handle_new_user (membaca metadata role).
+  // ==========================
+  const createDoctor = async ({
+    email,
+    password,
+    fullName,
+    phone = "",
+    specialization = "",
+    strNumber = "",
+    bio = "",
+  }) => {
+    // Hanya admin yang boleh.
+    if (profile?.role !== "admin") {
+      return { success: false, error: "Hanya admin yang dapat membuat akun dokter." };
+    }
+
+    try {
+      // Client sementara: storage tidak persist → tidak mengubah sesi admin.
+      const { createClient } = await import("@supabase/supabase-js");
+      const tempClient = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      );
+
+      const { data, error } = await tempClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
             full_name: fullName,
             phone,
-            role: "customer",
-            is_active: true,
+            role: "doctor",
+            specialization,
+            str_number: strNumber,
+            bio,
           },
-          { onConflict: "id" }
-        );
+        },
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
       }
 
-      return { success: true };
+      return { success: true, userId: data.user?.id };
     } catch (err) {
       return { success: false, error: err.message };
     }
@@ -356,6 +395,23 @@ export const AuthProvider = ({ children }) => {
     await fetchProfile(user.id);
   };
 
+  // ==========================
+  // GANTI PASSWORD (customer Supabase)
+  // ==========================
+  const changePassword = async (newPassword) => {
+    // Akun lokal (admin) tidak tersimpan di Supabase Auth.
+    if (localStorage.getItem(LOCAL_SESSION_KEY)) {
+      return { success: false, error: "Akun ini tidak mendukung ganti password." };
+    }
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -364,8 +420,10 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     login,
     register,
+    createDoctor,
     logout,
     updateProfile,
+    changePassword,
     getUserProfile,
   };
 

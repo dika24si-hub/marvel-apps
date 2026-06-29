@@ -11,6 +11,7 @@ const LINKS = [
   { label: "Hewan", to: "/customer/daftar-hewan" },
   { label: "Jadwal", to: "/customer/jadwal" },
   { label: "Rekam Medis", to: "/customer/rekam-medis" },
+  { label: "Konsultasi", to: "/customer/konsultasi" },
   { label: "Pembayaran", to: "/customer/pembayaran" },
   { label: "Membership", to: "/customer/membership" },
 ];
@@ -54,9 +55,9 @@ export default function CustomerNavbar() {
       </ul>
 
       <div className="cust-nav-right">
-        <div className="cust-nav-user">
+        <NavLink to="/customer/profil" className="cust-nav-user" title="Profil Saya">
           <img src={fotoDika} alt="Profil" />
-        </div>
+        </NavLink>
         <button type="button" className="cust-nav-logout" onClick={handleLogout}>
           <FaSignOutAlt />
           <span>Log Out</span>

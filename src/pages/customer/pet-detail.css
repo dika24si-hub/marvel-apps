@@ -1,0 +1,403 @@
+/* =====================================================================
+   Pet Detail — gaya "collar"
+   Kartu profil kiri + panel tab kanan. Palet teal #14b8a6.
+   ===================================================================== */
+
+.pdx {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ---------- KARTU PROFIL (KIRI) ---------- */
+.pdx-card {
+  background: #fff;
+  border: 1px solid #e8ece4;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  position: sticky;
+  top: 16px;
+}
+
+.pdx-photo-wrap {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: #0f172a;
+}
+.pdx-photo,
+.pdx-photo.ph {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+  color: #fff;
+}
+.pdx-close {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+.pdx-close:hover { background: #fff; }
+.pdx-photo-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px 18px 14px;
+  background: linear-gradient(transparent, rgba(15, 23, 42, 0.82));
+  color: #fff;
+}
+.pdx-photo-overlay h1 {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.1;
+}
+.pdx-photo-overlay span {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.pdx-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 14px 16px 4px;
+}
+.pdx-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.pdx-tag.ok { background: #ecfdf5; color: #0f766e; border-color: #99f6e4; }
+.pdx-tag.warn { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.pdx-tag.bad { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+
+.pdx-info {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0 16px;
+}
+.pdx-info li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px dashed #eef1ea;
+  font-size: 13px;
+}
+.pdx-info li:last-child { border-bottom: none; }
+.pdx-info li span { color: #94a3b8; }
+.pdx-info li b { color: #0f172a; font-weight: 600; text-align: right; }
+
+.pdx-owner {
+  padding: 12px 16px;
+  border-top: 1px solid #eef1ea;
+  margin-top: 6px;
+}
+.pdx-owner-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+.pdx-owner-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.pdx-owner-ava {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+.pdx-owner-row b { font-size: 14px; color: #0f172a; }
+
+.pdx-card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+.pdx-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: all 0.15s;
+}
+.pdx-btn.primary { background: #14b8a6; color: #fff; }
+.pdx-btn.primary:hover { background: #0d9488; }
+.pdx-btn.danger { background: #fef2f2; color: #b91c1c; }
+.pdx-btn.danger:hover { background: #b91c1c; color: #fff; }
+
+/* ---------- PANEL KANAN ---------- */
+.pdx-main {
+  background: transparent;
+}
+.pdx-tabs {
+  display: flex;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #e8ece4;
+  border-radius: 14px;
+  padding: 6px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+.pdx-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.pdx-tab:hover { color: #0f172a; }
+.pdx-tab.active { background: #14b8a6; color: #fff; }
+.pdx-tab-badge {
+  background: #f97316;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+.pdx-tab.active .pdx-tab-badge { background: #fff; color: #f97316; }
+
+.pdx-panels { display: flex; flex-direction: column; gap: 16px; }
+
+.pdx-block {
+  background: #fff;
+  border: 1px solid #e8ece4;
+  border-radius: 16px;
+  padding: 20px 22px;
+}
+.pdx-block h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+}
+
+/* Rows (membership / bookings) */
+.pdx-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid #f1f5f0;
+  font-size: 13.5px;
+  flex-wrap: wrap;
+}
+.pdx-row:first-of-type { border-top: none; }
+.pdx-row-code { font-weight: 700; color: #0f172a; min-width: 84px; }
+.pdx-row-main { color: #334155; flex: 1; }
+.pdx-row-chip {
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12px;
+  color: #475569;
+}
+.pdx-row-right { color: #14b8a6; font-weight: 600; font-size: 13px; }
+
+/* Mini cards (vaccines / treatments) */
+.pdx-cards-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pdx-mini {
+  display: flex;
+  gap: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 14px;
+}
+.pdx-mini.bordered { background: #fff; border: 1px solid #e8ece4; }
+.pdx-mini-bar {
+  width: 4px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.pdx-mini-bar.amber { background: #f59e0b; }
+.pdx-mini-bar.teal { background: #14b8a6; }
+.pdx-mini b { font-size: 13px; color: #0f172a; display: block; margin-bottom: 4px; }
+.pdx-mini small { font-size: 12px; }
+.pdx-mini small.ok { color: #14b8a6; font-weight: 600; }
+.pdx-upd {
+  background: #14b8a6;
+  color: #fff;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
+
+/* Diet */
+.pdx-diet {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.pdx-diet-type span,
+.pdx-diet-meal span {
+  display: block;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+.pdx-diet-type b,
+.pdx-diet-meal b {
+  font-size: 13.5px;
+  color: #0f172a;
+}
+.pdx-diet-notes {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.pdx-diet-notes li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+}
+.pdx-diet-notes svg { color: #14b8a6; }
+
+/* Timeline (medical / grooming) */
+.pdx-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 8px;
+}
+.pdx-timeline li {
+  position: relative;
+  padding: 0 0 18px 32px;
+}
+.pdx-timeline li::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 30px;
+  bottom: -2px;
+  width: 2px;
+  background: #eef1ea;
+}
+.pdx-timeline li:last-child::before { display: none; }
+.pdx-tl-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+.pdx-tl-dot.teal { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+.pdx-tl-body {
+  background: #f8fafc;
+  border: 1px solid #eef1ea;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.pdx-tl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.pdx-tl-head b { font-size: 14px; color: #0f172a; }
+.pdx-tl-head small { font-size: 12px; color: #94a3b8; white-space: nowrap; }
+.pdx-tl-note { font-size: 12.5px; color: #475569; margin: 2px 0; line-height: 1.5; }
+.pdx-tl-doc {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #14b8a6;
+  font-weight: 600;
+}
+
+.pdx-empty { font-size: 13px; color: #94a3b8; }
+
+.pdx-missing { padding: 24px; }
+.pdx-back,
+.pdx-missing .pdx-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #14b8a6;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 900px) {
+  .pdx { grid-template-columns: 1fr; }
+  .pdx-card { position: static; }
+  .pdx-cards-2 { grid-template-columns: 1fr; }
+  .pdx-diet { grid-template-columns: 1fr; }
+}
