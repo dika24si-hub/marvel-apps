@@ -6,7 +6,7 @@ import { supabase } from "./supabase";
 
 export async function getPetsByOwner(ownerId) {
   const { data, error } = await supabase
-    .from("pets")
+    .from("animals")
     .select("*")
     .eq("owner_id", ownerId)
     .order("created_at", { ascending: false });
@@ -17,7 +17,7 @@ export async function getPetsByOwner(ownerId) {
 
 export async function createPet(pet) {
   const { data, error } = await supabase
-    .from("pets")
+    .from("animals")
     .insert(pet)
     .select()
     .single();
@@ -28,7 +28,7 @@ export async function createPet(pet) {
 
 export async function updatePet(id, updates) {
   const { data, error } = await supabase
-    .from("pets")
+    .from("animals")
     .update(updates)
     .eq("id", id)
     .select()
@@ -39,7 +39,7 @@ export async function updatePet(id, updates) {
 }
 
 export async function deletePet(id) {
-  const { error } = await supabase.from("pets").delete().eq("id", id);
+  const { error } = await supabase.from("animals").delete().eq("id", id);
   if (error) throw error;
   return true;
 }
@@ -50,9 +50,9 @@ export async function deletePet(id) {
 
 export async function getPaymentsByOwner(ownerId) {
   const { data, error } = await supabase
-    .from("payments")
-    .select("*")
-    .eq("owner_id", ownerId)
+    .from("invoices")
+    .select("*, invoice_items(*)")
+    .eq("member_id", ownerId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -61,8 +61,8 @@ export async function getPaymentsByOwner(ownerId) {
 
 export async function payPayment(id) {
   const { data, error } = await supabase
-    .from("payments")
-    .update({ status: "Lunas", paid_at: new Date().toISOString() })
+    .from("invoices")
+    .update({ status: "PAID", paid_at: new Date().toISOString() })
     .eq("id", id)
     .select()
     .single();
@@ -486,31 +486,86 @@ export async function getAdminStats() {
 // MEMBER MANAGEMENT — Admin (PRD 9.2)
 // =====================================================================
 
-/** Ambil semua member (role customer/member) + jumlah hewan. */
-export async function getMembers() {
-  const { data: profs, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, phone, city, role, is_active, created_at, last_login")
-    .in("role", ["customer", "member"])
-    .order("created_at", { ascending: false });
-  if (error) throw error;
+const MEMBER_ROLE_ALIASES = new Set(["customer", "member", "user", "client", "pemilik"]);
+const STAFF_ROLE_ALIASES = new Set(["admin", "doctor", "dokter", "staff"]);
 
-  const members = profs || [];
+const normalizeRoleText = (role) => String(role || "").trim().toLowerCase();
+
+const displayMemberName = (member) => {
+  const name = member?.full_name?.trim();
+  if (name) return name;
+  const email = member?.email?.trim();
+  if (email && email !== "-") return email;
+  return "-";
+};
+
+/** Ambil semua member/customer + jumlah hewan. */
+export async function getMembers() {
+  const [profilesRes, doctorsRes, animalsRes, invoicesRes, consultationsRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, email, phone, role, is_active, created_at, last_login")
+      .order("created_at", { ascending: false }),
+    supabase.from("doctors").select("id"),
+    supabase.from("animals").select("owner_id, created_at"),
+    supabase.from("invoices").select("member_id, created_at"),
+    supabase.from("consultations").select("member_id, created_at"),
+  ]);
+
+  if (profilesRes.error) {
+    console.warn("Profil member tidak bisa dibaca penuh:", profilesRes.error.message);
+  }
+
+  const profiles = profilesRes.data || [];
+  const doctors = doctorsRes.data || [];
+  const animals = animalsRes.data || [];
+  const invoices = invoicesRes.data || [];
+  const consultations = consultationsRes.data || [];
+
+  const doctorIds = new Set(doctors.map((d) => d.id));
+  const firstActivity = {};
+
+  [
+    ...animals.map((r) => ({ id: r.owner_id, created_at: r.created_at })),
+    ...invoices.map((r) => ({ id: r.member_id, created_at: r.created_at })),
+    ...consultations.map((r) => ({ id: r.member_id, created_at: r.created_at })),
+  ].forEach((r) => {
+    if (!r.id || !r.created_at) return;
+    if (!firstActivity[r.id] || new Date(r.created_at) < new Date(firstActivity[r.id])) {
+      firstActivity[r.id] = r.created_at;
+    }
+  });
+
+  const relatedMemberIds = new Set(Object.keys(firstActivity));
+
+  const members = profiles.filter((p) => {
+    const role = normalizeRoleText(p.role);
+    if (doctorIds.has(p.id) || STAFF_ROLE_ALIASES.has(role)) return false;
+    if (MEMBER_ROLE_ALIASES.has(role)) return true;
+    return !role || relatedMemberIds.has(p.id);
+  });
+
   if (members.length === 0) return [];
 
   // Hitung jumlah hewan per member.
   const ids = members.map((m) => m.id);
-  const { data: pets } = await supabase
-    .from("animals")
-    .select("owner_id")
-    .in("owner_id", ids);
+  const visibleAnimals = animals.filter((p) => ids.includes(p.owner_id));
 
-  const petCount = (pets || []).reduce((acc, p) => {
+  const petCount = visibleAnimals.reduce((acc, p) => {
     acc[p.owner_id] = (acc[p.owner_id] || 0) + 1;
     return acc;
   }, {});
 
-  return members.map((m) => ({ ...m, petCount: petCount[m.id] || 0 }));
+  return members.map((m) => ({
+    ...m,
+    full_name: displayMemberName(m),
+    email: m.email || "-",
+    phone: m.phone || "-",
+    created_at: m.created_at || firstActivity[m.id] || null,
+    role: MEMBER_ROLE_ALIASES.has(normalizeRoleText(m.role)) ? m.role : "customer",
+    is_active: m.is_active !== false,
+    petCount: petCount[m.id] || 0,
+  }));
 }
 
 /** Aktif/nonaktifkan akun member. */
@@ -803,6 +858,57 @@ export async function getInvoicesByOwner(memberId) {
   return data || [];
 }
 
+/** Ambil semua invoice untuk admin + pemilik, item, appointment, dan hewan. */
+export async function getAllInvoices() {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*, invoice_items(*)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+
+  const invoices = data || [];
+  if (invoices.length === 0) return [];
+
+  const memberIds = [...new Set(invoices.map((i) => i.member_id).filter(Boolean))];
+  const appointmentIds = [...new Set(invoices.map((i) => i.appointment_id).filter(Boolean))];
+
+  const [{ data: members }, { data: appointments }] = await Promise.all([
+    memberIds.length
+      ? supabase.from("profiles").select("id, full_name, email, phone").in("id", memberIds)
+      : Promise.resolve({ data: [] }),
+    appointmentIds.length
+      ? supabase.from("appointments").select("id, animal_id, pet_name, complaint, scheduled_at").in("id", appointmentIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const memberMap = Object.fromEntries((members || []).map((m) => [m.id, m]));
+  const appointmentMap = Object.fromEntries((appointments || []).map((a) => [a.id, a]));
+
+  const animalIds = [
+    ...new Set((appointments || []).map((a) => a.animal_id).filter(Boolean)),
+  ];
+  let animalMap = {};
+  if (animalIds.length > 0) {
+    const { data: animals } = await supabase
+      .from("animals")
+      .select("id, name, species, breed")
+      .in("id", animalIds);
+    animalMap = Object.fromEntries((animals || []).map((a) => [a.id, a]));
+  }
+
+  return invoices.map((inv) => {
+    const appointment = appointmentMap[inv.appointment_id] || null;
+    const animal = appointment?.animal_id ? animalMap[appointment.animal_id] || null : null;
+
+    return {
+      ...inv,
+      member: memberMap[inv.member_id] || null,
+      appointment,
+      animal,
+    };
+  });
+}
+
 /** Bayar invoice (PENDING -> PAID). */
 export async function payInvoice(invoiceId, method = "QRIS") {
   const { data, error } = await supabase
@@ -890,25 +996,54 @@ export async function getAllPatients() {
   if (ownerIds.length > 0) {
     const { data: owners } = await supabase
       .from("profiles")
-      .select("id, full_name, email, phone, city")
+      .select("id, full_name, email, phone, created_at, is_active")
       .in("id", ownerIds);
     ownerMap = Object.fromEntries((owners || []).map((o) => [o.id, o]));
   }
 
-  // Jumlah kunjungan per hewan.
+  // Jumlah dan kunjungan terakhir per hewan.
   const { data: appts } = await supabase
     .from("appointments")
-    .select("animal_id");
-  const visitCount = (appts || []).reduce((acc, a) => {
-    if (a.animal_id) acc[a.animal_id] = (acc[a.animal_id] || 0) + 1;
+    .select("animal_id, scheduled_at, created_at")
+    .order("scheduled_at", { ascending: false });
+
+  const visitInfo = (appts || []).reduce((acc, a) => {
+    if (!a.animal_id) return acc;
+
+    const current = acc[a.animal_id] || { count: 0, lastVisit: null };
+    const visitDate = a.scheduled_at || a.created_at || null;
+
+    acc[a.animal_id] = {
+      count: current.count + 1,
+      lastVisit:
+        visitDate && (!current.lastVisit || new Date(visitDate) > new Date(current.lastVisit))
+          ? visitDate
+          : current.lastVisit,
+    };
+
     return acc;
   }, {});
 
-  return list.map((a) => ({
-    ...a,
-    owner: ownerMap[a.owner_id] || null,
-    visitCount: visitCount[a.id] || 0,
-  }));
+  return list.map((a) => {
+    const owner = ownerMap[a.owner_id] || null;
+
+    return {
+      ...a,
+      gender: a.gender ?? null,
+      foto: a.foto ?? null,
+      owner: owner
+        ? { ...owner, full_name: displayMemberName(owner) }
+        : {
+            id: a.owner_id,
+            full_name: "-",
+            email: "-",
+            phone: "-",
+            created_at: null,
+          },
+      visitCount: visitInfo[a.id]?.count || 0,
+      lastVisit: visitInfo[a.id]?.lastVisit || null,
+    };
+  });
 }
 
 /** Semua konsultasi (untuk inbox dokter, PRD 8.5). */
@@ -1011,10 +1146,10 @@ export async function getDoctorProfile(id) {
 }
 
 /** Simpan profil dokter (profiles + doctors). */
-export async function updateDoctorProfile(id, { full_name, phone, city, avatar_url, specialization, str_number, bio }) {
+export async function updateDoctorProfile(id, { full_name, phone, avatar_url, specialization, str_number, bio }) {
   const { error: pErr } = await supabase
     .from("profiles")
-    .update({ full_name, phone, city, avatar_url })
+    .update({ full_name, phone, avatar_url })
     .eq("id", id);
   if (pErr) throw pErr;
 
@@ -1550,22 +1685,76 @@ export async function submitReview({ memberId, doctorId, appointmentId = null, r
 
 /** Semua review untuk panel admin (termasuk yang perlu ditindaklanjuti). */
 export async function getAllReviews() {
-  const { data, error } = await supabase
-    .from("reviews")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [{ data, error }, { data: npsRows, error: npsError }] = await Promise.all([
+    supabase
+      .from("reviews")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("leads")
+      .select("id, email, message, created_at")
+      .eq("type", "nps")
+      .order("created_at", { ascending: false }),
+  ]);
+
   if (error) throw error;
+  if (npsError) console.warn("Gagal memuat NPS:", npsError.message);
 
   const list = data || [];
-  if (list.length === 0) return [];
   const memberIds = [...new Set(list.map((r) => r.member_id).filter(Boolean))];
+  const doctorIds = [...new Set(list.map((r) => r.doctor_id).filter(Boolean))];
   let nameMap = {};
+  let doctorMap = {};
+
   if (memberIds.length) {
     const { data: members } = await supabase
-      .from("profiles").select("id, full_name").in("id", memberIds);
-    nameMap = Object.fromEntries((members || []).map((m) => [m.id, m.full_name]));
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", memberIds);
+    nameMap = Object.fromEntries(
+      (members || []).map((m) => [m.id, m.full_name || m.email || "Member"])
+    );
   }
-  return list.map((r) => ({ ...r, member_name: nameMap[r.member_id] || "Member" }));
+
+  if (doctorIds.length) {
+    const { data: doctors } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", doctorIds);
+    doctorMap = Object.fromEntries(
+      (doctors || []).map((d) => [d.id, d.full_name || d.email || "Dokter"])
+    );
+  }
+
+  const reviews = list.map((r) => ({
+    ...r,
+    source: "review",
+    member_name: nameMap[r.member_id] || "Member",
+    doctor_name: doctorMap[r.doctor_id] || "Dokter",
+  }));
+
+  const nps = (npsRows || []).map((row) => {
+    const message = row.message || "";
+    const match = message.match(/^NPS:(\d+)(?:\s*\|\s*(.*))?$/i);
+    const score = match ? Number(match[1]) : 0;
+    const comment = match?.[2]?.trim() || "-";
+    const rating = Math.max(1, Math.min(5, Math.round(score / 2)));
+
+    return {
+      id: `nps-${row.id}`,
+      source: "nps",
+      member_name: row.email || "Member",
+      doctor_name: "Layanan Klinik",
+      rating,
+      nps_score: score,
+      comment,
+      created_at: row.created_at,
+    };
+  });
+
+  return [...reviews, ...nps].sort(
+    (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  );
 }
 
 /** Simpan skor NPS (0-10) ke tabel leads (type 'nps'). */

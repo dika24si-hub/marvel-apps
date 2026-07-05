@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FaPlus,
   FaMoneyBillWave,
@@ -11,6 +11,7 @@ import {
 import { useLang } from "../i18n/LanguageContext";
 import { formatDate, formatCurrency } from "../i18n/format";
 import { usePageSearch } from "../context/SearchContext";
+import { getAllInvoices } from "../lib/services";
 
 import {
   PageHeader,
@@ -26,23 +27,48 @@ import {
 } from "../components/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/shadcn";
 
-const DATA = [
-  { no: 1, invoice: "INV-20260510-001", hewan: "Milo",  pemilik: "Budi Santoso",  layananKey: "vaksinRabies",  tanggal: "10 Mei 2026", metodeKey: "transferBca", total: 250000,  status: "Lunas"      },
-  { no: 2, invoice: "INV-20260505-002", hewan: "Rocky", pemilik: "Andi Wijaya",   layananKey: "operasiRingan", tanggal: "05 Mei 2026", metodeKey: "qris",        total: 1750000, status: "Lunas"      },
-  { no: 3, invoice: "INV-20260501-003", hewan: "Luna",  pemilik: "Sari Indah",    layananKey: "vaksinTricat",  tanggal: "01 Mei 2026", metodeKey: "tunai",       total: 180000,  status: "Lunas"      },
-  { no: 4, invoice: "INV-20260428-004", hewan: "Bruno", pemilik: "Rizky Pratama", layananKey: "konsulKulit",   tanggal: "28 Apr 2026", metodeKey: "belumBayar",  total: 150000,  status: "Pending"    },
-  { no: 5, invoice: "INV-20260502-005", hewan: "Coco",  pemilik: "Dewi Lestari",  layananKey: "checkupRutin",  tanggal: "02 Mei 2026", metodeKey: "none",        total: 120000,  status: "Dibatalkan" },
-];
+const invLabel = (id) => `INV-${String(id || "").slice(0, 8).toUpperCase()}`;
 
-const LAYANAN = {
-  id: { vaksinRabies: "Vaksin Rabies", operasiRingan: "Operasi Ringan", vaksinTricat: "Vaksin Tricat", konsulKulit: "Konsultasi Kulit", checkupRutin: "Checkup Rutin" },
-  en: { vaksinRabies: "Rabies Vaccine", operasiRingan: "Minor Surgery", vaksinTricat: "Tricat Vaccine", konsulKulit: "Skin Consultation", checkupRutin: "Routine Checkup" },
+const formatIsoDate = (iso, lang) => {
+  if (!iso) return "-";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return formatDate(iso, lang) || "-";
+  return date.toLocaleDateString(lang === "en" ? "en-US" : "id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 };
 
-const METODE = {
-  id: { transferBca: "Transfer BCA", qris: "QRIS", tunai: "Tunai", belumBayar: "Belum Bayar", none: "-" },
-  en: { transferBca: "BCA Transfer", qris: "QRIS", tunai: "Cash", belumBayar: "Unpaid", none: "-" },
+const invoiceStatus = (status) => {
+  if (status === "PAID") return "Lunas";
+  if (status === "FAILED" || status === "CANCELLED") return "Dibatalkan";
+  return "Pending";
 };
+
+const itemSummary = (items = []) => {
+  const names = items.map((it) => it.item_name).filter(Boolean);
+  if (names.length === 0) return "Layanan klinik";
+  if (names.length <= 2) return names.join(", ");
+  return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+};
+
+const mapInvoiceRow = (inv, index) => ({
+  id: inv.id,
+  no: index + 1,
+  invoice: invLabel(inv.id),
+  hewan: inv.animal?.name || inv.appointment?.pet_name || "-",
+  pemilik: inv.member?.full_name || inv.member?.email || "-",
+  layanan: itemSummary(inv.invoice_items),
+  tanggal: inv.paid_at || inv.created_at,
+  metode: inv.payment_method || (inv.status === "PAID" ? "-" : "Belum Bayar"),
+  total: inv.total || 0,
+  status: invoiceStatus(inv.status),
+  rawStatus: inv.status,
+  items: inv.invoice_items || [],
+  subtotal: inv.subtotal || 0,
+  diskon: inv.discount_amount || 0,
+});
 
 const STATUS_VARIANT = {
   Lunas: "success",
@@ -61,40 +87,55 @@ const PER_PAGE = 3;
 export default function Pembayaran() {
   const { t, lang } = useLang();
   const { matches } = usePageSearch(t("pembayaran.searchPlaceholder"));
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("Semua");
   const [page, setPage] = useState(1);
   const [activeInvoice, setActiveInvoice] = useState(null);
 
-  const layananLabel = (key) => LAYANAN[lang]?.[key] ?? key;
-  const metodeLabel = (key) => METODE[lang]?.[key] ?? key;
+  const loadInvoices = async () => {
+    setLoading(true);
+    try {
+      const rows = await getAllInvoices();
+      setInvoices(rows.map(mapInvoiceRow));
+    } catch (err) {
+      console.error("Gagal memuat pembayaran:", err.message);
+      setInvoices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInvoices();
+  }, []);
 
   const filtered = useMemo(() => {
-    return DATA.filter((d) => {
+    return invoices.filter((d) => {
       const matchKey = matches(
         d.invoice,
         d.hewan,
         d.pemilik,
-        layananLabel(d.layananKey)
+        d.layanan
       );
       const matchFilter = filter === "Semua" || d.status === filter;
       return matchKey && matchFilter;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matches, filter, lang]);
+  }, [matches, filter, invoices]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const stats = useMemo(() => {
-    const lunas = DATA.filter((d) => d.status === "Lunas");
-    const pending = DATA.filter((d) => d.status === "Pending");
+    const lunas = invoices.filter((d) => d.status === "Lunas");
+    const pending = invoices.filter((d) => d.status === "Pending");
     return {
       totalPemasukan: lunas.reduce((a, b) => a + b.total, 0),
       totalPending: pending.reduce((a, b) => a + b.total, 0),
       jumlahLunas: lunas.length,
       jumlahPending: pending.length,
     };
-  }, []);
+  }, [invoices]);
 
   const filterKeys = ["Semua", "Lunas", "Pending", "Dibatalkan"];
 
@@ -139,45 +180,49 @@ export default function Pembayaran() {
             title={t("pembayaran.riwayat")}
             subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
           >
-            <Table
-              rowKey="no"
-              data={pageRows}
-              empty={<EmptyState title={t("common.noMatch")} />}
-              columns={[
-                { key: "invoice", header: t("table.invoice"),
-                  render: (r) => <Tag color="blue">{r.invoice}</Tag> },
-                { key: "hewan", header: t("table.hewan"),
-                  render: (r) => <b>{r.hewan}</b> },
-                { key: "pemilik", header: t("table.pemilik") },
-                { key: "layanan", header: t("table.layanan"),
-                  render: (r) => <Tag color="brand">{layananLabel(r.layananKey)}</Tag> },
-                { key: "tanggal", header: t("table.tanggal"),
-                  render: (r) => <span className="muted">{formatDate(r.tanggal, lang)}</span> },
-                { key: "metode", header: t("table.metode"),
-                  render: (r) => metodeLabel(r.metodeKey) },
-                { key: "total", header: t("table.total"), align: "right",
-                  render: (r) => <b className="amount">{formatCurrency(r.total, lang)}</b> },
-                { key: "status", header: t("table.status"),
-                  render: (r) => (
-                    <Badge variant={STATUS_VARIANT[r.status]} icon={STATUS_ICON[r.status]}>
-                      {t(`status.${r.status}`)}
-                    </Badge>
-                  ),
-                },
-                { key: "act", header: t("table.berkas"), align: "right",
-                  render: (r) => (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      leftIcon={<FaFileInvoice />}
-                      onClick={() => setActiveInvoice(r)}
-                    >
-                      {t("common.invoice")}
-                    </Button>
-                  ),
-                },
-              ]}
-            />
+            {loading ? (
+              <p style={{ color: "#94a3b8", fontSize: 13 }}>Memuat pembayaran...</p>
+            ) : (
+              <Table
+                rowKey="id"
+                data={pageRows}
+                empty={<EmptyState title={t("common.noMatch")} />}
+                columns={[
+                  { key: "invoice", header: t("table.invoice"),
+                    render: (r) => <Tag color="blue">{r.invoice}</Tag> },
+                  { key: "hewan", header: t("table.hewan"),
+                    render: (r) => <b>{r.hewan}</b> },
+                  { key: "pemilik", header: t("table.pemilik") },
+                  { key: "layanan", header: t("table.layanan"),
+                    render: (r) => <Tag color="brand">{r.layanan}</Tag> },
+                  { key: "tanggal", header: t("table.tanggal"),
+                    render: (r) => <span className="muted">{formatIsoDate(r.tanggal, lang)}</span> },
+                  { key: "metode", header: t("table.metode"),
+                    render: (r) => r.metode },
+                  { key: "total", header: t("table.total"), align: "right",
+                    render: (r) => <b className="amount">{formatCurrency(r.total, lang)}</b> },
+                  { key: "status", header: t("table.status"),
+                    render: (r) => (
+                      <Badge variant={STATUS_VARIANT[r.status]} icon={STATUS_ICON[r.status]}>
+                        {t(`status.${r.status}`)}
+                      </Badge>
+                    ),
+                  },
+                  { key: "act", header: t("table.berkas"), align: "right",
+                    render: (r) => (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        leftIcon={<FaFileInvoice />}
+                        onClick={() => setActiveInvoice(r)}
+                      >
+                        {t("common.invoice")}
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
+            )}
 
             {filtered.length > PER_PAGE && (
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
@@ -215,15 +260,15 @@ export default function Pembayaran() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "#7a857f" }}>Layanan</span>
-              <b>{layananLabel(activeInvoice.layananKey)}</b>
+              <b>{activeInvoice.layanan}</b>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "#7a857f" }}>Tanggal</span>
-              <b>{formatDate(activeInvoice.tanggal, lang)}</b>
+              <b>{formatIsoDate(activeInvoice.tanggal, lang)}</b>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "#7a857f" }}>Metode</span>
-              <b>{metodeLabel(activeInvoice.metodeKey)}</b>
+              <b>{activeInvoice.metode}</b>
             </div>
             <hr style={{ border: 0, borderTop: "1px dashed #e5e9e2" }} />
             <div style={{ display: "flex", justifyContent: "space-between" }}>

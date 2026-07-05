@@ -118,7 +118,7 @@ export default function PetDetail() {
         <ul className="pdx-info">
           <li><span>Jenis</span><b>{pet.species}</b></li>
           <li><span>Ras</span><b>{pet.breed}</b></li>
-          <li><span>Jenis Kelamin</span><b>{pet.gender || "Jantan"}</b></li>
+          <li><span>Jenis Kelamin</span><b>{pet.gender || "-"}</b></li>
           <li><span>Warna</span><b>{pet.color || "Coklat"}</b></li>
           <li><span>Berat</span><b>{pet.weightKg ? `${pet.weightKg} kg` : "-"}</b></li>
           <li><span>Microchip</span><b>{pet.microchip || "394940002828"}</b></li>

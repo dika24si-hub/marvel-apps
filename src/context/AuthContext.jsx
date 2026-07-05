@@ -28,6 +28,33 @@ const LOCAL_ACCOUNTS = [
 
 const LOCAL_SESSION_KEY = "vetcare_local_session";
 
+const normalizeAppRole = (role) => {
+  const value = String(role || "").trim().toLowerCase();
+  if (["member", "user", "client", "pemilik"].includes(value)) return "customer";
+  return value || null;
+};
+
+const ensureProfileRow = async ({ id, email, fullName = "", phone = "", role = "customer" }) => {
+  if (!id) return;
+  try {
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        id,
+        email,
+        full_name: fullName,
+        phone,
+        role,
+        is_active: true,
+      },
+      { onConflict: "id" }
+    );
+
+    if (error) console.warn("Sinkron profil user gagal:", error.message);
+  } catch (err) {
+    console.warn("Sinkron profil user gagal:", err.message);
+  }
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
 
@@ -209,13 +236,24 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: error.message };
       }
 
-      const profileData = await fetchProfile(data.user.id);
+      let profileData = await fetchProfile(data.user.id);
 
       if (!profileData) {
-        return {
-          success: false,
-          error: "Profil user tidak ditemukan",
-        };
+        await ensureProfileRow({
+          id: data.user.id,
+          email: data.user.email,
+          fullName: data.user.user_metadata?.full_name || "",
+          phone: data.user.user_metadata?.phone || "",
+          role: normalizeAppRole(data.user.user_metadata?.role) || "customer",
+        });
+        profileData = await fetchProfile(data.user.id);
+
+        if (!profileData) {
+          return {
+            success: false,
+            error: "Profil user tidak ditemukan",
+          };
+        }
       }
 
       // Akun nonaktif tidak boleh login.
@@ -249,7 +287,7 @@ export const AuthProvider = ({ children }) => {
   // ==========================
   const register = async (email, password, fullName, phone) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -265,8 +303,14 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: error.message };
       }
 
-      // Profil otomatis dibuat oleh trigger `handle_new_user` di database.
-      // Tidak perlu upsert manual (bisa kena RLS). Cukup andalkan trigger.
+      await ensureProfileRow({
+        id: data.user?.id,
+        email,
+        fullName,
+        phone,
+        role: "customer",
+      });
+
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -415,7 +459,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     profile,
-    role: profile?.role || null,
+    role: normalizeAppRole(profile?.role),
     loading,
     isAuthenticated: !!user,
     login,
@@ -436,13 +480,14 @@ export const AuthProvider = ({ children }) => {
 
 export const useRole = () => {
   const { role } = useAuth();
+  const normalizedRole = normalizeAppRole(role);
 
   return {
-    role,
-    isAdmin: role === "admin",
-    isDoctor: role === "doctor",
-    isCustomer: role === "customer",
-    hasRole: (requiredRole) => role === requiredRole,
-    hasAnyRole: (roles) => roles.includes(role),
+    role: normalizedRole,
+    isAdmin: normalizedRole === "admin",
+    isDoctor: normalizedRole === "doctor",
+    isCustomer: normalizedRole === "customer",
+    hasRole: (requiredRole) => normalizedRole === normalizeAppRole(requiredRole),
+    hasAnyRole: (roles) => roles.map(normalizeAppRole).includes(normalizedRole),
   };
 };

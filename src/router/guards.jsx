@@ -11,6 +11,14 @@ export const ROLES = {
   CUSTOMER: "customer",
 };
 
+export const normalizeRole = (role) => {
+  const value = String(role || "").trim().toLowerCase();
+  if (value === "member" || value === "user" || value === "client" || value === "pemilik") {
+    return ROLES.CUSTOMER;
+  }
+  return value || null;
+};
+
 // ======================
 // HOME PATH PER ROLE
 // ======================
@@ -20,9 +28,10 @@ export const ROLES = {
 //   admin    -> dashboard admin    (/admin)
 // Belum login / tidak dikenali -> halaman guest (/)
 export const roleHome = (role) => {
-  if (role === ROLES.CUSTOMER) return "/customer";
-  if (role === ROLES.DOCTOR) return "/doctor";
-  if (role === ROLES.ADMIN) return "/admin";
+  const normalized = normalizeRole(role);
+  if (normalized === ROLES.CUSTOMER) return "/customer";
+  if (normalized === ROLES.DOCTOR) return "/doctor";
+  if (normalized === ROLES.ADMIN) return "/admin";
   return "/";
 };
 
@@ -52,6 +61,7 @@ const LoadingScreen = () => {
 const Guards = ({ children, roles = [] }) => {
   const { loading, isAuthenticated, role } = useAuth();
   const location = useLocation();
+  const normalizedRole = normalizeRole(role);
 
   // Loading auth
   if (loading) {
@@ -60,7 +70,7 @@ const Guards = ({ children, roles = [] }) => {
 
   // Belum login, ATAU sesi ada tapi role tidak bisa ditentukan.
   // Arahkan ke login supaya tidak terjebak di layar "Memuat...".
-  if (!isAuthenticated || !role) {
+  if (!isAuthenticated || !normalizedRole) {
     return (
       <Navigate
         to="/login"
@@ -71,8 +81,8 @@ const Guards = ({ children, roles = [] }) => {
   }
 
   // Jika route membutuhkan role tertentu, arahkan ke home sesuai role.
-  if (roles.length > 0 && !roles.includes(role)) {
-    return <Navigate to={roleHome(role)} replace />;
+  if (roles.length > 0 && !roles.includes(normalizedRole)) {
+    return <Navigate to={roleHome(normalizedRole)} replace />;
   }
 
   return children;
@@ -87,11 +97,12 @@ export default Guards;
 // - Belum login  -> halaman guest (/).
 export const RoleRedirect = () => {
   const { loading, isAuthenticated, role } = useAuth();
+  const normalizedRole = normalizeRole(role);
 
   if (loading) return <LoadingScreen />;
 
-  if (isAuthenticated && role) {
-    return <Navigate to={roleHome(role)} replace />;
+  if (isAuthenticated && normalizedRole) {
+    return <Navigate to={roleHome(normalizedRole)} replace />;
   }
   return <Navigate to="/" replace />;
 };
@@ -116,16 +127,17 @@ export const CustomerGuard = ({ children }) => (
 // ======================
 export const usePermissions = () => {
   const { role } = useAuth();
+  const normalizedRole = normalizeRole(role);
 
   return {
-    role,
-    isAdmin: role === ROLES.ADMIN,
-    isDoctor: role === ROLES.DOCTOR,
-    isCustomer: role === ROLES.CUSTOMER,
-    canManageUsers: role === ROLES.ADMIN,
-    canManageDoctors: role === ROLES.ADMIN,
-    canManagePatients: role === ROLES.ADMIN || role === ROLES.DOCTOR,
-    canCreateMedicalRecord: role === ROLES.DOCTOR,
-    canViewOwnPets: role === ROLES.CUSTOMER,
+    role: normalizedRole,
+    isAdmin: normalizedRole === ROLES.ADMIN,
+    isDoctor: normalizedRole === ROLES.DOCTOR,
+    isCustomer: normalizedRole === ROLES.CUSTOMER,
+    canManageUsers: normalizedRole === ROLES.ADMIN,
+    canManageDoctors: normalizedRole === ROLES.ADMIN,
+    canManagePatients: normalizedRole === ROLES.ADMIN || normalizedRole === ROLES.DOCTOR,
+    canCreateMedicalRecord: normalizedRole === ROLES.DOCTOR,
+    canViewOwnPets: normalizedRole === ROLES.CUSTOMER,
   };
 };

@@ -36,12 +36,30 @@ const mapPet = (row) => ({
   color: row.color ?? "",
   microchip: row.microchip ?? "",
   mainVet: row.main_vet ?? "",
-  photo: row.photo_url ?? "",
+  photo: row.foto ?? row.photo_url ?? row.photo ?? "",
   vaccineStatus: row.vaccine_status ?? "belum",
   healthStatus: row.health_status ?? "healthy",
   complaint: row.notes ?? "",
   createdAt: row.created_at,
 });
+
+const isMissingColumnError = (error, column) => {
+  const text = `${error?.code || ""} ${error?.message || ""} ${error?.details || ""}`.toLowerCase();
+  return text.includes(column.toLowerCase()) && (
+    text.includes("column") ||
+    text.includes("schema cache") ||
+    text.includes("pgrst204")
+  );
+};
+
+const withPhotoUrlColumn = (payload) => {
+  const next = { ...payload };
+  if ("foto" in next) {
+    next.photo_url = next.foto;
+    delete next.foto;
+  }
+  return next;
+};
 
 const mapAppt = (row) => ({
   id: row.id,
@@ -110,6 +128,16 @@ export function CustomerDataProvider({ children }) {
   // ---------- PETS ----------
   const addPet = async (data) => {
     if (!ownerId) return null;
+    const gender = data.gender?.trim();
+    const foto = data.photo?.trim();
+
+    if (!gender) {
+      throw new Error("Kelamin hewan wajib dipilih.");
+    }
+    if (!foto) {
+      throw new Error("URL foto hewan wajib diisi.");
+    }
+
     const payload = {
       owner_id: ownerId,
       name: data.name?.trim() || "Tanpa Nama",
@@ -117,24 +145,53 @@ export function CustomerDataProvider({ children }) {
       breed: data.breed?.trim() || null,
       age_text: data.ageText?.trim() || null,
       weight: data.weightKg ? Number(data.weightKg) : null,
-      gender: data.gender || null,
+      gender,
       color: data.color || null,
       microchip: data.microchip || null,
       main_vet: data.mainVet || null,
-      photo_url: data.photo?.trim() || null,
+      foto,
       vaccine_status: data.vaccineStatus || "belum",
       health_status: data.healthStatus || "healthy",
       notes: data.complaint?.trim() || null,
     };
-    const { data: row, error } = await supabase
+    let { data: row, error } = await supabase
       .from("animals")
       .insert(payload)
       .select()
       .single();
+
+    if (error && isMissingColumnError(error, "foto")) {
+      const retry = await supabase
+        .from("animals")
+        .insert(withPhotoUrlColumn(payload))
+        .select()
+        .single();
+      row = retry.data;
+      error = retry.error;
+    }
+
     if (error) {
       console.error("Gagal tambah hewan:", error.message);
-      return null;
+      throw error;
     }
+
+    if (row?.id && (row.gender !== gender || row.foto !== foto)) {
+      const { data: syncedRow, error: syncError } = await supabase
+        .from("animals")
+        .update({ gender, foto })
+        .eq("id", row.id)
+        .eq("owner_id", ownerId)
+        .select()
+        .single();
+
+      if (syncError) {
+        console.error("Gagal sinkron gender/foto hewan:", syncError.message);
+        throw syncError;
+      }
+
+      row = syncedRow || row;
+    }
+
     const pet = mapPet(row);
     setPets((prev) => [pet, ...prev]);
     return pet;
@@ -147,15 +204,23 @@ export function CustomerDataProvider({ children }) {
     if ("breed" in updates) payload.breed = updates.breed;
     if ("ageText" in updates) payload.age_text = updates.ageText;
     if ("weightKg" in updates) payload.weight = updates.weightKg ? Number(updates.weightKg) : null;
-    if ("photo" in updates) payload.photo_url = updates.photo;
+    if ("gender" in updates) payload.gender = updates.gender || null;
+    if ("color" in updates) payload.color = updates.color || null;
+    if ("microchip" in updates) payload.microchip = updates.microchip || null;
+    if ("mainVet" in updates) payload.main_vet = updates.mainVet || null;
+    if ("photo" in updates) payload.foto = updates.photo?.trim() || null;
     if ("vaccineStatus" in updates) payload.vaccine_status = updates.vaccineStatus;
     if ("healthStatus" in updates) payload.health_status = updates.healthStatus;
     if ("complaint" in updates) payload.notes = updates.complaint;
 
-    const { error } = await supabase.from("animals").update(payload).eq("id", id);
+    let { error } = await supabase.from("animals").update(payload).eq("id", id);
+    if (error && isMissingColumnError(error, "foto")) {
+      const retry = await supabase.from("animals").update(withPhotoUrlColumn(payload)).eq("id", id);
+      error = retry.error;
+    }
     if (error) {
       console.error("Gagal update hewan:", error.message);
-      return;
+      throw error;
     }
     setPets((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
   };

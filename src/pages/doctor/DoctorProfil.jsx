@@ -2,7 +2,7 @@
 // =====================================================================
 // PROFIL DOKTER (PRD 8.7)
 //   - Edit profil publik (nama, spesialisasi, bio, foto)
-//   - Edit profil privat (no HP, kota, no STR)
+//   - Edit profil privat (no HP, no STR)
 //   - Ganti password
 // Data nyata dari Supabase (profiles + doctors).
 // =====================================================================
@@ -22,7 +22,7 @@ export default function DoctorProfil() {
   const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
-    full_name: "", phone: "", city: "", avatar_url: "",
+    full_name: "", phone: "", avatar_url: "",
     specialization: "", str_number: "", bio: "",
   });
   const [saving, setSaving] = useState(false);
@@ -46,7 +46,6 @@ export default function DoctorProfil() {
         setForm({
           full_name: d.full_name || "",
           phone: d.phone || "",
-          city: d.city || "",
           avatar_url: d.avatar_url || "",
           specialization: d.specialization || "",
           str_number: d.str_number || "",
@@ -173,17 +172,10 @@ export default function DoctorProfil() {
                   <label>Email</label>
                   <input type="email" value={user?.email || ""} disabled />
                 </div>
-                <div className="prof-row2">
-                  <div className="prof-field">
-                    <label>Nomor HP</label>
-                    <input type="tel" placeholder="08xxxxxxxxxx" value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-                  </div>
-                  <div className="prof-field">
-                    <label>Kota</label>
-                    <input type="text" placeholder="Kota praktik" value={form.city}
-                      onChange={(e) => setForm({ ...form, city: e.target.value })} />
-                  </div>
+                <div className="prof-field">
+                  <label>Nomor HP</label>
+                  <input type="tel" placeholder="08xxxxxxxxxx" value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })} />
                 </div>
                 <div className="prof-field">
                   <label><FaIdBadge /> Nomor STR</label>

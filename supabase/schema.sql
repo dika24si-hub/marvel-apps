@@ -451,6 +451,9 @@ create policy "leads admin read"  on public.leads for select using (public.is_ad
 -- Memberi tempat untuk field bebas dari UI customer.
 -- =====================================================================
 alter table public.animals      add column if not exists age_text text;
+alter table public.animals      add column if not exists gender text;
+alter table public.animals      add column if not exists foto text;
+alter table public.animals      add column if not exists photo_url text;
 alter table public.appointments add column if not exists doctor_name text;
 alter table public.appointments add column if not exists pet_name text;
 

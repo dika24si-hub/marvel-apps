@@ -33,7 +33,7 @@ export default function Ulasan() {
   }, []);
 
   const filtered = useMemo(() => reviews.filter((r) => {
-    const mk = matches(r.member_name, r.comment);
+    const mk = matches(r.member_name, r.doctor_name, r.comment, r.source);
     const mf = tab === "all"
       ? true
       : tab === "positive" ? r.rating >= 4
@@ -77,13 +77,24 @@ export default function Ulasan() {
                 empty={<EmptyState icon={<FaCommentDots />} title="Belum ada ulasan" />}
                 columns={[
                   { key: "member", header: "Member", render: (r) => <b>{r.member_name}</b> },
+                  { key: "source", header: "Sumber",
+                    render: (r) => (
+                      <Badge variant={r.source === "nps" ? "info" : "primary"}>
+                        {r.source === "nps" ? "NPS" : "Ulasan Dokter"}
+                      </Badge>
+                    ),
+                  },
+                  { key: "target", header: "Dokter/Layanan", render: (r) => r.doctor_name || "-" },
                   { key: "rating", header: "Rating",
                     render: (r) => (
-                      <span style={{ color: "#f5b301" }}>
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <FaStar key={i} style={{ opacity: i < r.rating ? 1 : 0.2, fontSize: 13 }} />
-                        ))}
-                      </span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <span style={{ color: "#f5b301" }}>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <FaStar key={i} style={{ opacity: i < r.rating ? 1 : 0.2, fontSize: 13 }} />
+                          ))}
+                        </span>
+                        {r.source === "nps" && <small className="muted">NPS: {r.nps_score}/10</small>}
+                      </div>
                     ),
                   },
                   { key: "comment", header: "Komentar", render: (r) => r.comment || "-" },

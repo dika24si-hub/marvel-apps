@@ -2,7 +2,7 @@
 // =====================================================================
 // PROFIL MEMBER (PRD 7.2)
 // Tab: Edit Profil | Ganti Password | Preferensi Notifikasi
-//   - Edit Profil: nama, no HP, kota/alamat, foto (avatar_url) -> profiles
+//   - Edit Profil: nama, no HP, foto (avatar_url) -> profiles
 //   - Ganti Password: Supabase Auth updateUser
 //   - Preferensi Notifikasi: email / pengingat janji / promo (localStorage)
 // =====================================================================
@@ -31,7 +31,6 @@ export default function CustomerProfil() {
   const [form, setForm] = useState({
     full_name: "",
     phone: "",
-    city: "",
     avatar_url: "",
   });
   const [savingProfile, setSavingProfile] = useState(false);
@@ -41,7 +40,6 @@ export default function CustomerProfil() {
       setForm({
         full_name: profile.full_name || "",
         phone: profile.phone || "",
-        city: profile.city || "",
         avatar_url: profile.avatar_url || "",
       });
     }
@@ -73,7 +71,6 @@ export default function CustomerProfil() {
     const res = await updateProfile({
       full_name: form.full_name.trim(),
       phone: form.phone.trim(),
-      city: form.city.trim(),
       avatar_url: form.avatar_url.trim() || null,
     });
     setSavingProfile(false);
@@ -190,25 +187,14 @@ export default function CustomerProfil() {
                   <small>Email tidak dapat diubah.</small>
                 </div>
 
-                <div className="prof-row2">
-                  <div className="prof-field">
-                    <label>Nomor HP</label>
-                    <input
-                      type="tel"
-                      placeholder="08xxxxxxxxxx"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    />
-                  </div>
-                  <div className="prof-field">
-                    <label>Kota / Alamat</label>
-                    <input
-                      type="text"
-                      placeholder="Kota Anda"
-                      value={form.city}
-                      onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    />
-                  </div>
+                <div className="prof-field">
+                  <label>Nomor HP</label>
+                  <input
+                    type="tel"
+                    placeholder="08xxxxxxxxxx"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
                 </div>
 
                 <button type="submit" className="prof-btn" disabled={savingProfile}>

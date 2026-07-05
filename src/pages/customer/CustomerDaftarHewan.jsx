@@ -23,7 +23,7 @@ const VAC = {
 
 const EMPTY = {
   name: "", species: "Kucing", breed: "", ageText: "", weightKg: "",
-  photo: "", vaccineStatus: "belum", healthStatus: "healthy", complaint: "",
+  gender: "", color: "", photo: "", vaccineStatus: "belum", healthStatus: "healthy", complaint: "",
 };
 
 export default function CustomerDaftarHewan() {
@@ -32,6 +32,7 @@ export default function CustomerDaftarHewan() {
 
   const [form, setForm] = useState(EMPTY);
   const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const change = (k, v) => setForm((p) => ({ ...p, [k]: v }));
@@ -39,12 +40,18 @@ export default function CustomerDaftarHewan() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const pet = await addPet(form);
-    setSaving(false);
-    if (!pet) return;
-    setSuccess(`"${pet.name}" berhasil ditambahkan.`);
-    setForm(EMPTY);
-    setTimeout(() => setSuccess(""), 4000);
+    setSuccess("");
+    setError("");
+    try {
+      const pet = await addPet(form);
+      setSuccess(`"${pet.name}" berhasil ditambahkan.`);
+      setForm(EMPTY);
+      setTimeout(() => setSuccess(""), 4000);
+    } catch (err) {
+      setError(err.message || "Gagal menyimpan hewan ke database.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = (e, id, name) => {
@@ -62,6 +69,11 @@ export default function CustomerDaftarHewan() {
       {success && (
         <div className="dh-alert">
           <FaCheckCircle /> <span>{success}</span>
+        </div>
+      )}
+      {error && (
+        <div className="dh-alert err">
+          <span>{error}</span>
         </div>
       )}
 
@@ -101,6 +113,20 @@ export default function CustomerDaftarHewan() {
 
             <div className="dh-row">
               <div className="ui-field">
+                <label className="ui-label">Kelamin</label>
+                <select className="dh-select" value={form.gender}
+                  onChange={(e) => change("gender", e.target.value)} required>
+                  <option value="">Pilih kelamin</option>
+                  <option value="Jantan">Jantan</option>
+                  <option value="Betina">Betina</option>
+                </select>
+              </div>
+              <Input label="Warna" placeholder="Mis. Putih abu-abu" value={form.color}
+                onChange={(e) => change("color", e.target.value)} />
+            </div>
+
+            <div className="dh-row">
+              <div className="ui-field">
                 <label className="ui-label">Status Kesehatan</label>
                 <select className="dh-select" value={form.healthStatus}
                   onChange={(e) => change("healthStatus", e.target.value)}>
@@ -120,8 +146,8 @@ export default function CustomerDaftarHewan() {
               </div>
             </div>
 
-            <Input label="URL Foto (opsional)" placeholder="https://..."
-              value={form.photo} onChange={(e) => change("photo", e.target.value)} />
+            <Input label="URL Foto" placeholder="https://..."
+              value={form.photo} onChange={(e) => change("photo", e.target.value)} required />
 
             <div className="ui-field">
               <label className="ui-label">Catatan / Keluhan (opsional)</label>

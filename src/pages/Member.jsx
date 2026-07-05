@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  FaUsers, FaUserCheck, FaUserSlash, FaPaw, FaEnvelope, FaPhone,
+  FaUsers, FaUserCheck, FaUserSlash, FaPaw,
 } from "react-icons/fa";
 
 import { usePageSearch } from "../context/SearchContext";
@@ -16,6 +16,8 @@ const PER_PAGE = 8;
 
 const fmtDate = (iso) =>
   iso ? new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
+
+const memberName = (m) => m.full_name || m.email || "-";
 
 export default function Member() {
   const { matches } = usePageSearch("Cari nama atau email member...");
@@ -101,18 +103,17 @@ export default function Member() {
                 data={pageRows}
                 empty={<EmptyState title="Belum ada member" description="Member yang mendaftar akan muncul di sini." />}
                 columns={[
-                  { key: "nama", header: "Member",
+                  { key: "nama", header: "Nama",
                     render: (m, i) => (
                       <div className="pet-cell">
-                        <Avatar name={m.full_name || m.email} theme={AVATAR_THEMES[i % AVATAR_THEMES.length]} size={40} />
+                        <Avatar name={memberName(m)} theme={AVATAR_THEMES[i % AVATAR_THEMES.length]} size={40} />
                         <div>
-                          <b>{m.full_name || "(Tanpa Nama)"}</b>
-                          <small>{m.email}</small>
+                          <b>{memberName(m)}</b>
                         </div>
                       </div>
                     ),
                   },
-                  { key: "phone", header: "Telepon", render: (m) => <span className="muted">{m.phone || "-"}</span> },
+                  { key: "email", header: "Email", render: (m) => <span className="muted">{m.email || "-"}</span> },
                   { key: "pets", header: "Hewan", render: (m) => <Badge variant="info">{m.petCount} ekor</Badge> },
                   { key: "joined", header: "Bergabung", render: (m) => <span className="muted">{fmtDate(m.created_at)}</span> },
                   { key: "status", header: "Status",

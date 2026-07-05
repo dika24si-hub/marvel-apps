@@ -31,6 +31,7 @@ export default function AuthSlider() {
 
   // ---- Sign Up ----
   const [suName, setSuName] = useState("");
+  const [suPhone, setSuPhone] = useState("");
   const [suEmail, setSuEmail] = useState("");
   const [suPassword, setSuPassword] = useState("");
 
@@ -91,7 +92,7 @@ export default function AuthSlider() {
 
     try {
       setLoading(true);
-      const result = await register(suEmail, suPassword, suName, "");
+      const result = await register(suEmail, suPassword, suName, suPhone);
       if (!result.success) {
         setError(result.error);
         return;
@@ -151,6 +152,13 @@ export default function AuthSlider() {
               value={suName}
               onChange={(e) => setSuName(e.target.value)}
               required
+            />
+            <input
+              className="as-input"
+              type="text"
+              placeholder="Nomor Telepon"
+              value={suPhone}
+              onChange={(e) => setSuPhone(e.target.value)}
             />
             <input
               className="as-input"
