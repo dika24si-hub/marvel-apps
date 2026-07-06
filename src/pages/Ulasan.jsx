@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/shadcn";
 import { usePageSearch } from "../context/SearchContext";
 import { getAllReviews } from "../lib/services";
+import { supabase } from "../lib/supabase";
 import "./doctor/doctor.css";
 
 const fmtDate = (iso) =>
@@ -25,11 +26,39 @@ export default function Ulasan() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all");
 
-  useEffect(() => {
+  const loadReviews = () => {
     getAllReviews()
       .then(setReviews)
       .catch((e) => console.error("Gagal memuat ulasan:", e.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadReviews();
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-reviews-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reviews" },
+        () => loadReviews()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "leads" },
+        () => loadReviews()
+      )
+      .subscribe();
+
+    const handleFocus = () => loadReviews();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filtered = useMemo(() => reviews.filter((r) => {

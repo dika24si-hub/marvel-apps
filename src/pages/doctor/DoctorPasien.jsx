@@ -13,6 +13,7 @@ import {
 } from "../../components/ui";
 import { Dialog } from "../../components/shadcn";
 import { usePageSearch } from "../../context/SearchContext";
+import { useAuth } from "../../context/AuthContext";
 import { getAllPatients, getMedicalRecordsByAnimal } from "../../lib/services";
 import "./doctor.css";
 
@@ -22,6 +23,7 @@ const fmtDate = (iso) =>
 
 export default function DoctorPasien() {
   const { matches } = usePageSearch("Cari nama hewan, pemilik, atau jenis...");
+  const { profile } = useAuth();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -31,11 +33,12 @@ export default function DoctorPasien() {
   const [recLoading, setRecLoading] = useState(false);
 
   useEffect(() => {
-    getAllPatients()
+    if (!profile?.id) return;
+    getAllPatients(profile.id)
       .then(setPatients)
       .catch((e) => console.error("Gagal memuat pasien:", e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [profile?.id]);
 
   const filtered = useMemo(
     () => patients.filter((p) => matches(p.name, p.owner?.full_name, p.species, p.breed)),

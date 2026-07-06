@@ -1,4 +1,10 @@
-import { useMemo, useState } from "react";
+// src/pages/RekamMedis.jsx
+// =====================================================================
+// REKAM MEDIS — ADMIN (PRD 8.4 & 11.3)
+//   - Menampilkan semua riwayat pemeriksaan hewan peliharaan
+//   - Sync real-time dengan Supabase
+// =====================================================================
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   FaPlus,
   FaNotesMedical,
@@ -10,6 +16,8 @@ import {
 import { useLang } from "../i18n/LanguageContext";
 import { formatDate } from "../i18n/format";
 import { usePageSearch } from "../context/SearchContext";
+import { supabase } from "../lib/supabase";
+import { getAllMedicalRecords } from "../lib/services";
 
 import {
   PageHeader,
@@ -24,24 +32,6 @@ import {
 } from "../components/ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/shadcn";
 
-const DATA = [
-  { no: 1, kode: "RM-00421", hewan: "Milo",  jenis: "Kucing", pemilik: "Budi Santoso",  dokter: "Dr. Dika Pratama",   tanggal: "10 Mei 2026", diagnosaKey: "demamRingan",   kategori: "Konsultasi", tindakanKey: "antipiretik",     obat: "Paracetamol vet"        },
-  { no: 2, kode: "RM-00422", hewan: "Rocky", jenis: "Anjing", pemilik: "Andi Wijaya",   dokter: "Dr. Felix Hartanto", tanggal: "05 Mei 2026", diagnosaKey: "patahTulang",   kategori: "Operasi",    tindakanKey: "fiksasi",         obat: "Antibiotik + analgesik" },
-  { no: 3, kode: "RM-00423", hewan: "Luna",  jenis: "Kucing", pemilik: "Sari Indah",    dokter: "Dr. Kiran Nugraha",  tanggal: "01 Mei 2026", diagnosaKey: "vaksinRutin",   kategori: "Vaksin",     tindakanKey: "vaksinTricat",    obat: "Tricat vaccine"         },
-  { no: 4, kode: "RM-00424", hewan: "Bruno", jenis: "Anjing", pemilik: "Rizky Pratama", dokter: "Dr. Clara Wijayanti",tanggal: "28 Apr 2026", diagnosaKey: "infeksiKulit",  kategori: "Konsultasi", tindakanKey: "salepTopikal",    obat: "Salep antijamur"        },
-  { no: 5, kode: "RM-00425", hewan: "Coco",  jenis: "Kucing", pemilik: "Dewi Lestari",  dokter: "Dr. Dika Pratama",   tanggal: "02 Mei 2026", diagnosaKey: "checkupRutin",  kategori: "Konsultasi", tindakanKey: "pemeriksaanUmum", obat: "-"                       },
-];
-
-const DIAGNOSA = {
-  id: { demamRingan: "Demam Ringan", patahTulang: "Patah Tulang Minor", vaksinRutin: "Vaksinasi Rutin", infeksiKulit: "Infeksi Kulit", checkupRutin: "Checkup Rutin" },
-  en: { demamRingan: "Mild Fever", patahTulang: "Minor Fracture", vaksinRutin: "Routine Vaccination", infeksiKulit: "Skin Infection", checkupRutin: "Routine Checkup" },
-};
-
-const TINDAKAN = {
-  id: { antipiretik: "Pemberian antipiretik", fiksasi: "Operasi fiksasi ringan", vaksinTricat: "Vaksin Tricat", salepTopikal: "Pemberian salep topikal", pemeriksaanUmum: "Pemeriksaan umum" },
-  en: { antipiretik: "Antipyretic administration", fiksasi: "Minor fixation surgery", vaksinTricat: "Tricat vaccination", salepTopikal: "Topical ointment", pemeriksaanUmum: "General examination" },
-};
-
 const KATEGORI_VARIANT = {
   Konsultasi: "info",
   Vaksin: "success",
@@ -54,43 +44,122 @@ const KATEGORI_ICON = {
   Operasi: <FaProcedures />,
 };
 
-const PER_PAGE = 3;
+const PER_PAGE = 5;
+
+// Helper untuk menebak kategori rekam medis berdasarkan diagnosis/tindakan
+const determineCategory = (rec) => {
+  const text = `${rec.physical_exam_notes || ""} ${rec.diagnosis || ""} ${rec.actions_taken || ""}`.toLowerCase();
+  if (text.includes("operasi") || text.includes("bedah") || text.includes("jahit") || text.includes("fiksasi")) {
+    return "Operasi";
+  }
+  if (text.includes("vaksin") || text.includes("imunisasi") || text.includes("suntik")) {
+    return "Vaksin";
+  }
+  return "Konsultasi";
+};
 
 export default function RekamMedis() {
   const { t, lang } = useLang();
   const { matches } = usePageSearch(t("rekamMedis.searchPlaceholder"));
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("Semua");
   const [page, setPage] = useState(1);
 
-  const diagLabel = (key) => DIAGNOSA[lang]?.[key] ?? key;
-  const tindakanLabel = (key) => TINDAKAN[lang]?.[key] ?? key;
+  const loadRecords = useCallback(async () => {
+    setLoading(true);
+    try {
+      const rows = await getAllMedicalRecords();
+      
+      // Mapping record Supabase ke format UI
+      const mapped = rows.map((r, i) => {
+        const category = determineCategory(r);
+        const prescriptionsText = (r.prescriptions || [])
+          .map((p) => `${p.drug_name} (${p.dosage || ""})`)
+          .join(", ") || "-";
+
+        return {
+          id: r.id,
+          no: i + 1,
+          kode: `RM-${String(r.id || "").substring(0, 5).toUpperCase()}`,
+          hewan: r.animal?.name || "Tanpa Nama",
+          jenis: r.animal?.species || "Kucing",
+          pemilik: r.animal?.owner?.full_name || r.animal?.owner?.email || "-",
+          dokter: r.doctor?.full_name || r.doctor?.email || "-",
+          tanggal: r.created_at,
+          diagnosa: r.diagnosis || "-",
+          kategori: category,
+          tindakan: r.actions_taken || "-",
+          obat: prescriptionsText,
+        };
+      });
+
+      setRecords(mapped);
+    } catch (err) {
+      console.error("Gagal memuat rekam medis:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecords();
+  }, [loadRecords]);
+
+  // Real-time synchronization
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-medical-records-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "medical_records" },
+        () => {
+          loadRecords();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "prescriptions" },
+        () => {
+          loadRecords();
+        }
+      )
+      .subscribe();
+
+    const handleFocus = () => loadRecords();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
+  }, [loadRecords]);
 
   const filtered = useMemo(() => {
-    return DATA.filter((d) => {
+    return records.filter((d) => {
       const matchKey = matches(
         d.kode,
         d.hewan,
         d.pemilik,
         d.dokter,
-        diagLabel(d.diagnosaKey)
+        d.diagnosa
       );
       const matchFilter = filter === "Semua" || d.kategori === filter;
       return matchKey && matchFilter;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matches, filter, lang]);
+  }, [matches, filter, records]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const stats = useMemo(
     () => ({
-      total: DATA.length,
-      konsultasi: DATA.filter((d) => d.kategori === "Konsultasi").length,
-      vaksin: DATA.filter((d) => d.kategori === "Vaksin").length,
-      operasi: DATA.filter((d) => d.kategori === "Operasi").length,
+      total: records.length,
+      konsultasi: records.filter((d) => d.kategori === "Konsultasi").length,
+      vaksin: records.filter((d) => d.kategori === "Vaksin").length,
+      operasi: records.filter((d) => d.kategori === "Operasi").length,
     }),
-    []
+    [records]
   );
 
   return (
@@ -99,8 +168,8 @@ export default function RekamMedis() {
         title={t("rekamMedis.title")}
         subtitle={t("rekamMedis.breadcrumb")}
         actions={
-          <Button variant="primary" leftIcon={<FaPlus />}>
-            {t("rekamMedis.addBtn")}
+          <Button variant="primary" leftIcon={<FaPlus />} onClick={loadRecords}>
+            Muat Ulang
           </Button>
         }
       />
@@ -120,6 +189,7 @@ export default function RekamMedis() {
           setPage(1);
         }}
         className="rekam-tabs"
+        style={{ marginTop: 14 }}
       >
         <TabsList>
           <TabsTrigger value="Semua">{t("common.all")}</TabsTrigger>
@@ -139,51 +209,55 @@ export default function RekamMedis() {
             title={t("rekamMedis.riwayat")}
             subtitle={`${t("common.showing")} ${filtered.length} ${t("common.data")}`}
           >
-            <Table
-              rowKey="no"
-              data={pageRows}
-              empty={<EmptyState title={t("common.noMatch")} />}
-              columns={[
-                { key: "kode", header: t("table.kode"),
-                  render: (r) => <Tag color="blue">{r.kode}</Tag> },
-                { key: "hewan", header: t("table.hewan"),
-                  render: (r) => (
-                    <>
-                      <b>{r.hewan}</b>
-                      <small className="block muted">{t(`jenis.${r.jenis}`)}</small>
-                    </>
-                  ),
-                },
-                { key: "pemilik", header: t("table.pemilik") },
-                { key: "dokter", header: t("table.dokter") },
-                { key: "tanggal", header: t("table.tanggal"),
-                  render: (r) => <span className="muted">{formatDate(r.tanggal, lang)}</span> },
-                { key: "diagnosa", header: t("table.diagnosa"),
-                  render: (r) => <b>{diagLabel(r.diagnosaKey)}</b> },
-                { key: "kategori", header: t("table.kategori"),
-                  render: (r) => (
-                    <Badge variant={KATEGORI_VARIANT[r.kategori]} icon={KATEGORI_ICON[r.kategori]}>
-                      {t(`kategori.${r.kategori}`)}
-                    </Badge>
-                  ),
-                },
-                { key: "tindakanObat", header: t("table.tindakanObat"),
-                  render: (r) => (
-                    <>
-                      <b style={{ fontSize: 12 }}>{tindakanLabel(r.tindakanKey)}</b>
-                      <small className="block muted">{t("common.obat")}: {r.obat}</small>
-                    </>
-                  ),
-                },
-                { key: "act", header: t("table.berkas"), align: "right",
-                  render: () => (
-                    <Button variant="ghost" size="sm" leftIcon={<FaFilePdf />}>
-                      {t("common.pdf")}
-                    </Button>
-                  ),
-                },
-              ]}
-            />
+            {loading ? (
+              <p style={{ color: "#94a3b8", fontSize: 13 }}>Memuat rekam medis...</p>
+            ) : (
+              <Table
+                rowKey="id"
+                data={pageRows}
+                empty={<EmptyState title={t("common.noMatch")} />}
+                columns={[
+                  { key: "kode", header: t("table.kode"),
+                    render: (r) => <Tag color="blue">{r.kode}</Tag> },
+                  { key: "hewan", header: t("table.hewan"),
+                    render: (r) => (
+                      <>
+                        <b>{r.hewan}</b>
+                        <small className="block muted">{t(`jenis.${r.jenis}`)}</small>
+                      </>
+                    ),
+                  },
+                  { key: "pemilik", header: t("table.pemilik") },
+                  { key: "dokter", header: t("table.dokter") },
+                  { key: "tanggal", header: t("table.tanggal"),
+                    render: (r) => <span className="muted">{formatDate(r.tanggal, lang)}</span> },
+                  { key: "diagnosa", header: t("table.diagnosa"),
+                    render: (r) => <b>{r.diagnosa}</b> },
+                  { key: "kategori", header: t("table.kategori"),
+                    render: (r) => (
+                      <Badge variant={KATEGORI_VARIANT[r.kategori]} icon={KATEGORI_ICON[r.kategori]}>
+                        {t(`kategori.${r.kategori}`)}
+                      </Badge>
+                    ),
+                  },
+                  { key: "tindakanObat", header: t("table.tindakanObat"),
+                    render: (r) => (
+                      <>
+                        <b style={{ fontSize: 12 }}>{r.tindakan}</b>
+                        <small className="block muted">{t("common.obat")}: {r.obat}</small>
+                      </>
+                    ),
+                  },
+                  { key: "act", header: t("table.berkas"), align: "right",
+                    render: () => (
+                      <Button variant="ghost" size="sm" leftIcon={<FaFilePdf />}>
+                        {t("common.pdf")}
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
+            )}
 
             {filtered.length > PER_PAGE && (
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>

@@ -51,43 +51,6 @@ const STATUS_LABEL = {
 const fmtTime = (iso) =>
   iso ? new Date(iso).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-";
 
-// Statistik kunjungan harian (visit & treatment)
-const visitData = [
-  { d: "18 Apr", visit: 14, treat: -8 },
-  { d: "19", visit: 22, treat: -10 },
-  { d: "20", visit: 18, treat: -16 },
-  { d: "21", visit: 25, treat: -9 },
-  { d: "22", visit: 28, treat: -14 },
-  { d: "23", visit: 20, treat: -11 },
-  { d: "24", visit: 16, treat: -7 },
-  { d: "25 Apr", visit: 30, treat: -10 },
-  { d: "26", visit: 24, treat: -12 },
-  { d: "27", visit: 26, treat: -15 },
-  { d: "28", visit: 18, treat: -13 },
-  { d: "29", visit: 14, treat: -8 },
-  { d: "30", visit: 22, treat: -9 },
-  { d: "1 Mei", visit: 28, treat: -14 },
-  { d: "2", visit: 21, treat: -10 },
-  { d: "3", visit: 17, treat: -8 },
-  { d: "4", visit: 15, treat: -9 },
-  { d: "5", visit: 26, treat: -11 },
-  { d: "9 Mei", visit: 19, treat: -7 },
-];
-
-// Data per jam (tab "Harian")
-const dailyData = [
-  { d: "08:00", visit: 4, treat: -2 },
-  { d: "09:00", visit: 7, treat: -3 },
-  { d: "10:00", visit: 9, treat: -5 },
-  { d: "11:00", visit: 6, treat: -2 },
-  { d: "12:00", visit: 3, treat: -1 },
-  { d: "13:00", visit: 5, treat: -3 },
-  { d: "14:00", visit: 8, treat: -4 },
-  { d: "15:00", visit: 10, treat: -6 },
-  { d: "16:00", visit: 6, treat: -2 },
-  { d: "17:00", visit: 4, treat: -2 },
-];
-
 export default function Dashboard() {
   const { t } = useLang();
   const [stats, setStats] = useState(null);
@@ -97,6 +60,59 @@ export default function Dashboard() {
       .then(setStats)
       .catch((err) => console.error("Gagal memuat statistik:", err.message));
   }, []);
+
+  // Grouping appointments ke 7 hari terakhir secara dinamis
+  const weeklyChartData = useMemo(() => {
+    if (!stats || !stats.appointments) return [];
+    const arr = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      const dateKey = d.toDateString();
+
+      const dayAppts = stats.appointments.filter((a) => {
+        return new Date(a.scheduled_at).toDateString() === dateKey;
+      });
+
+      const visit = dayAppts.filter((a) => a.status === "PENDING" || a.status === "CONFIRMED").length;
+      const treat = dayAppts.filter((a) => a.status === "COMPLETED").length;
+
+      arr.push({
+        d: dateStr,
+        visit: visit,
+        treat: -treat,
+      });
+    }
+    return arr;
+  }, [stats]);
+
+  // Grouping appointments hari ini ke jam kerja (08:00 - 17:00) secara dinamis
+  const dailyChartData = useMemo(() => {
+    if (!stats || !stats.appointments) return [];
+    const arr = [];
+    const todayKey = new Date().toDateString();
+    
+    for (let hour = 8; hour <= 17; hour++) {
+      const label = `${String(hour).padStart(2, "0")}:00`;
+      
+      const hourAppts = stats.appointments.filter((a) => {
+        const scheduled = new Date(a.scheduled_at);
+        return scheduled.toDateString() === todayKey && scheduled.getHours() === hour;
+      });
+
+      const visit = hourAppts.filter((a) => a.status === "PENDING" || a.status === "CONFIRMED").length;
+      const treat = hourAppts.filter((a) => a.status === "COMPLETED").length;
+
+      arr.push({
+        d: label,
+        visit: visit,
+        treat: -treat,
+      });
+    }
+    return arr;
+  }, [stats]);
 
   // Aktivitas terbaru = 5 appointment terakhir dibuat.
   const recentAppts = useMemo(() => {
@@ -202,8 +218,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <TabsContent value="weekly">{renderChart(visitData)}</TabsContent>
-            <TabsContent value="daily">{renderChart(dailyData)}</TabsContent>
+            <TabsContent value="weekly">{renderChart(weeklyChartData)}</TabsContent>
+            <TabsContent value="daily">{renderChart(dailyChartData)}</TabsContent>
           </Tabs>
         </div>
 

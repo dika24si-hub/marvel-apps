@@ -16,6 +16,7 @@ import {
 } from "react-icons/fa";
 import { PageHeader, Card } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
+import { supabase } from "../../lib/supabase";
 import "./customer.css";
 
 const NOTIF_KEY = "vc_notif_prefs";
@@ -34,6 +35,54 @@ export default function CustomerProfil() {
     avatar_url: "",
   });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarHovered, setAvatarHovered] = useState(false);
+
+  const handleAvatarFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      flash("err", "Ukuran foto maksimal 2MB.");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user?.id || 'guest'}/avatar-${Date.now()}.${ext}`;
+
+      let uploadResult = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, cacheControl: "3600" });
+
+      let bucketName = "avatars";
+      if (uploadResult.error) {
+        console.warn("Upload ke bucket avatars gagal, mencoba bucket pet-photos...", uploadResult.error.message);
+        uploadResult = await supabase.storage
+          .from("pet-photos")
+          .upload(path, file, { upsert: true, cacheControl: "3600" });
+        bucketName = "pet-photos";
+      }
+
+      if (uploadResult.error) {
+        throw new Error(uploadResult.error.message);
+      }
+
+      const { data } = supabase.storage.from(bucketName).getPublicUrl(path);
+      if (data?.publicUrl) {
+        setForm(f => ({ ...f, avatar_url: data.publicUrl }));
+        flash("ok", "Foto berhasil diunggah. Klik 'Simpan Perubahan' untuk menyimpan.");
+      } else {
+        throw new Error("Gagal mengambil URL publik foto.");
+      }
+    } catch (err) {
+      console.error(err);
+      flash("err", err.message || "Gagal mengunggah foto profil.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -153,20 +202,71 @@ export default function CustomerProfil() {
             <Card>
               <h3 className="prof-h3">Informasi Pribadi</h3>
               <form className="prof-form" onSubmit={handleSaveProfile}>
-                <div className="prof-avatar-row">
-                  {form.avatar_url ? (
-                    <img className="prof-avatar-lg" src={form.avatar_url} alt="Avatar"
-                      onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                  ) : (
-                    <div className="prof-avatar-lg ph">{initial}</div>
-                  )}
-                  <div className="prof-field" style={{ flex: 1 }}>
-                    <label><FaCamera /> URL Foto Profil</label>
+                <div className="prof-avatar-row" style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "8px" }}>
+                  <div
+                    className="prof-avatar-container"
+                    style={{ position: "relative", cursor: "pointer", width: "80px", height: "80px", borderRadius: "50%", overflow: "hidden" }}
+                    onMouseEnter={() => setAvatarHovered(true)}
+                    onMouseLeave={() => setAvatarHovered(false)}
+                    onClick={() => document.getElementById("avatar-file-input").click()}
+                  >
+                    {form.avatar_url ? (
+                      <img className="prof-avatar-lg" src={form.avatar_url} alt="Avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", margin: 0 }}
+                        onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                    ) : (
+                      <div className="prof-avatar-lg ph" style={{ width: "100%", height: "100%", borderRadius: "50%", display: "grid", placeItems: "center", margin: 0 }}>{initial}</div>
+                    )}
+                    <div
+                      className="prof-avatar-overlay"
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        background: "rgba(0,0,0,0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#fff",
+                        opacity: avatarHovered || uploadingAvatar ? 1 : 0,
+                        transition: "opacity 0.2s",
+                        fontSize: "18px"
+                      }}
+                    >
+                      <FaCamera />
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: "0 0 4px 0", fontSize: "15px", color: "#20322a", fontWeight: "600" }}>Foto Profil</h4>
+                    <p style={{ margin: "0 0 10px 0", fontSize: "12px", color: "#9aa39a" }}>Format JPG/PNG, ukuran maks. 2MB</p>
+                    <button
+                      type="button"
+                      className="prof-upload-btn"
+                      onClick={() => document.getElementById("avatar-file-input").click()}
+                      style={{
+                        background: "#e7f6ec",
+                        color: "#1d7a43",
+                        border: "none",
+                        borderRadius: "8px",
+                        padding: "6px 14px",
+                        fontWeight: "600",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        transition: "background 0.2s"
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = "#dceddf"}
+                      onMouseOut={(e) => e.currentTarget.style.background = "#e7f6ec"}
+                    >
+                      {uploadingAvatar ? "Mengunggah..." : "Pilih Foto"}
+                    </button>
                     <input
-                      type="url"
-                      placeholder="https://..."
-                      value={form.avatar_url}
-                      onChange={(e) => setForm({ ...form, avatar_url: e.target.value })}
+                      id="avatar-file-input"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={handleAvatarFileChange}
+                      disabled={uploadingAvatar}
                     />
                   </div>
                 </div>

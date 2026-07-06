@@ -304,8 +304,8 @@ export default function Hewan() {
       <Dialog
         open={!!activeHewan}
         onOpenChange={(o) => !o && setActiveHewan(null)}
-        title={activeHewan ? `Detail ${activeHewan.nama}` : ""}
-        description="Informasi lengkap data hewan."
+        title=""
+        description=""
         size="md"
         footer={
           <Button variant="primary" onClick={() => setActiveHewan(null)}>
@@ -314,56 +314,111 @@ export default function Hewan() {
         }
       >
         {activeHewan && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+
+            {/* ── Hero Foto ── */}
+            <div style={{
+              position: "relative",
+              width: "100%",
+              height: activeHewan.photo ? 220 : 100,
+              borderRadius: 12,
+              overflow: "hidden",
+              marginBottom: 16,
+              background: activeHewan.jenis === "Anjing"
+                ? "linear-gradient(135deg,#fff7ed,#fed7aa)"
+                : "linear-gradient(135deg,#eff6ff,#bfdbfe)",
+              flexShrink: 0,
+            }}>
               {activeHewan.photo ? (
-                <PetPhoto
-                  photo={activeHewan.photo}
-                  name={activeHewan.nama}
-                  className="pet-thumb pet-thumb-lg"
+                <img
+                  src={activeHewan.photo}
+                  alt={activeHewan.nama}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
               ) : (
-              <div
-                className={`pet-thumb ${activeHewan.jenis === "Anjing" ? "orange" : "blue"}`}
-                style={{ width: 52, height: 52, fontSize: 22 }}
-              >
-                <PetIcon jenis={activeHewan.jenis} />
-              </div>
+                <div style={{
+                  width: "100%", height: "100%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 52,
+                  color: activeHewan.jenis === "Anjing" ? "#f97316" : "#3b82f6",
+                }}>
+                  <PetIcon jenis={activeHewan.jenis} />
+                </div>
               )}
-              <div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0e2d24" }}>
-                  {activeHewan.nama}
-                </h3>
+
+              {/* Gradient overlay di bawah foto */}
+              {activeHewan.photo && (
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(to top, rgba(0,0,0,.72) 0%, transparent 55%)",
+                }} />
+              )}
+
+              {/* Nama & badge di overlay */}
+              <div style={{
+                position: "absolute",
+                bottom: activeHewan.photo ? 14 : "auto",
+                top: activeHewan.photo ? "auto" : "50%",
+                transform: activeHewan.photo ? "none" : "translateY(-50%)",
+                left: 14, right: 14,
+                display: "flex", alignItems: "flex-end", justifyContent: "space-between",
+              }}>
+                <div>
+                  <h3 style={{
+                    margin: 0, fontSize: 20, fontWeight: 800,
+                    color: activeHewan.photo ? "#fff" : "#0e2d24",
+                    textShadow: activeHewan.photo ? "0 1px 4px rgba(0,0,0,.4)" : "none",
+                  }}>
+                    {activeHewan.nama}
+                  </h3>
+                  <p style={{
+                    margin: "2px 0 0", fontSize: 12,
+                    color: activeHewan.photo ? "rgba(255,255,255,.8)" : "#6b7280",
+                  }}>
+                    {activeHewan.jenis} · {activeHewan.ras !== "-" ? activeHewan.ras : "Ras tidak diketahui"}
+                  </p>
+                </div>
                 <Badge variant={STATUS_VARIANT[activeHewan.status]} dot>
                   {labelOf(t("status"), activeHewan.status)}
                 </Badge>
               </div>
             </div>
 
-            <hr style={{ border: 0, borderTop: "1px dashed #e5e9e2" }} />
-
-            {[
-              [t("table.jenisRas"), `${labelOf(t("jenis"), activeHewan.jenis)} - ${activeHewan.ras}`],
-              [t("table.umur"), formatAge(activeHewan.umur)],
-              [t("table.kelamin"), labelOf(t("kelamin"), activeHewan.kelamin)],
-              [t("hewanDetail.berat"), activeHewan.berat],
-              [t("hewanDetail.warna"), activeHewan.warna],
-              [t("table.pemilik"), activeHewan.pemilik],
-              [t("hewanDetail.telepon"), activeHewan.telepon],
-              [t("hewanDetail.email"), activeHewan.email],
-              ["Bergabung", formatVisitDate(activeHewan.ownerJoined, lang)],
-              [t("table.kunjunganTerakhir"), formatVisitDate(activeHewan.terakhir, lang)],
-              [t("common.visits"), activeHewan.kunjungan],
-              ["ID", `ID-HW${String(activeHewan.no).padStart(3, "0")}`],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}
-              >
-                <span style={{ color: "#7a857f" }}>{label}</span>
-                <b style={{ color: "#0e2d24" }}>{value}</b>
-              </div>
-            ))}
+            {/* ── Info Detail Grid 2 kolom ── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px" }}>
+              {[
+                [t("table.jenisRas"),           `${labelOf(t("jenis"), activeHewan.jenis)} - ${activeHewan.ras}`],
+                [t("table.umur"),               formatAge(activeHewan.umur)],
+                [t("table.kelamin"),            labelOf(t("kelamin"), activeHewan.kelamin)],
+                [t("hewanDetail.berat"),        activeHewan.berat],
+                [t("hewanDetail.warna"),        activeHewan.warna],
+                [t("table.pemilik"),            activeHewan.pemilik],
+                [t("hewanDetail.telepon"),      activeHewan.telepon],
+                [t("hewanDetail.email"),        activeHewan.email],
+                ["Bergabung",                   formatVisitDate(activeHewan.ownerJoined, lang)],
+                [t("table.kunjunganTerakhir"),  formatVisitDate(activeHewan.terakhir, lang)],
+                [t("common.visits"),            `${activeHewan.kunjungan}x`],
+                ["ID",                          `ID-HW${String(activeHewan.no).padStart(3, "0")}`],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  style={{
+                    background: "#f8fafc",
+                    borderRadius: 8,
+                    padding: "8px 10px",
+                    borderLeft: "3px solid #e2e8f0",
+                  }}
+                >
+                  <div style={{ fontSize: 10.5, color: "#94a3b8", marginBottom: 2, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    {label}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0e2d24" }}>
+                    {value || "-"}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </Dialog>

@@ -3,18 +3,42 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   FaBell, FaPaw, FaCalendarAlt, FaClipboardList, FaCreditCard, FaSyringe,
-  FaPlusCircle, FaChevronRight, FaCalendarCheck, FaRegClock,
+  FaPlusCircle, FaChevronRight, FaCalendarCheck, FaRegClock, FaStar,
 } from "react-icons/fa";
 
-import fotoDika from "../../assets/dika.jpg";
 import { useAuth } from "../../context/AuthContext";
 import { useCustomerData } from "../../context/CustomerDataContext";
 import NpsSurvey from "../../components/customer/NpsSurvey";
 import {
   dummyPayments, dummyVaccineReminders,
 } from "../../data/dummyCustomer";
-import { getLoyalty, LOYALTY_TIERS, runMemberTriggers } from "../../lib/services";
+import { getLoyalty, LOYALTY_TIERS, runMemberTriggers, getInvoicesByOwner } from "../../lib/services";
 import "./customer.css";
+
+// Komponen avatar inisial — ditampilkan ketika belum ada foto profil
+const InitialAvatar = ({ name, size = 72 }) => {
+  const initials = (name || "U")
+    .trim()
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join("");
+  return (
+    <div
+      style={{
+        width: size, height: size, borderRadius: "50%",
+        background: "linear-gradient(135deg, #14b8a6, #0ea5e9)",
+        color: "#fff", display: "flex", alignItems: "center",
+        justifyContent: "center", fontSize: size * 0.38,
+        fontWeight: 700, flexShrink: 0, userSelect: "none",
+        border: "3px solid rgba(255,255,255,0.25)",
+        boxShadow: "0 0 15px rgba(22,199,132,0.2)",
+      }}
+    >
+      {initials}
+    </div>
+  );
+};
 
 const fullDate = (iso) =>
   new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
@@ -32,6 +56,7 @@ const QUICK = [
   { label: "Booking Pemeriksaan", icon: <FaCalendarAlt />,  to: "/customer/jadwal",       cls: "qa-sky" },
   { label: "Rekam Medis",         icon: <FaClipboardList />, to: "/customer/rekam-medis", cls: "qa-violet" },
   { label: "Pembayaran",          icon: <FaCreditCard />,   to: "/customer/pembayaran",   cls: "qa-amber" },
+  { label: "Ulasan Dokter",       icon: <FaStar />,         to: "/customer/ulasan-dokter", cls: "qa-brand" },
 ];
 
 export default function DashboardCustomer() {
@@ -41,13 +66,29 @@ export default function DashboardCustomer() {
 
   const firstName = (profile?.full_name || "Dika").split(" ")[0];
 
+  // Sapaan ramah waktu
+  const getGreeting = () => {
+    const hr = new Date().getHours();
+    if (hr < 11) return "Selamat Pagi";
+    if (hr < 15) return "Selamat Siang";
+    if (hr < 19) return "Selamat Sore";
+    return "Selamat Malam";
+  };
+
   // Loyalty nyata dari Supabase.
   const [loyalty, setLoyalty] = useState({ total: 0, tier: LOYALTY_TIERS[0] });
+  const [invoices, setInvoices] = useState([]);
+
   useEffect(() => {
     if (!user?.id) return;
     getLoyalty(user.id)
       .then(setLoyalty)
       .catch((e) => console.error("Gagal memuat loyalty:", e.message));
+    
+    getInvoicesByOwner(user.id)
+      .then(setInvoices)
+      .catch((e) => console.error("Gagal memuat invoice:", e.message));
+
     // Jalankan trigger CRM otomatis (PRD 10.4): reminder kontrol & win-back.
     runMemberTriggers(user.id);
   }, [user?.id]);
@@ -61,13 +102,28 @@ export default function DashboardCustomer() {
   const upcoming = appointments
     .filter((a) => a.status === "upcoming")
     .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-  const vaccine = dummyVaccineReminders[0];
-  const pendingBills = dummyPayments.filter((p) => p.status === "pending").length;
+
+  // Tentukan pengingat vaksin secara dinamis dari hewan yang belum/parsial vaksin
+  const needsVaccine = pets.find((p) => p.vaccineStatus !== "lengkap");
+  let vaccine = null;
+  if (needsVaccine) {
+    const estDueDate = new Date();
+    estDueDate.setDate(estDueDate.getDate() + 14); // countdown 14 hari
+
+    vaccine = {
+      petName: needsVaccine.name,
+      status: needsVaccine.vaccineStatus === "belum" ? "Belum Vaksin" : "Vaksin Parsial",
+      vaccine: needsVaccine.species === "Kucing" ? "Vaksin Tricat (Tahunan)" : needsVaccine.species === "Anjing" ? "Vaksin DHPPi (Tahunan)" : "Vaksinasi Rutin",
+      dueDate: estDueDate.toISOString(),
+    };
+  }
+
+  const pendingBills = invoices.filter((i) => i.status === "PENDING").length;
 
   const stats = [
     { icon: <FaPaw />,         label: "Hewan Terdaftar",  value: pets.length, cls: "st-green" },
     { icon: <FaCalendarAlt />, label: "Jadwal Aktif",     value: upcoming.length, cls: "st-sky" },
-    { icon: <FaSyringe />,     label: "Vaksin Mendatang",  value: dummyVaccineReminders.length, cls: "st-rose" },
+    { icon: <FaSyringe />,     label: "Perlu Vaksin",     value: pets.filter((p) => p.vaccineStatus !== "lengkap").length, cls: "st-rose" },
     { icon: <FaCreditCard />,  label: "Tagihan",          value: pendingBills, cls: "st-amber" },
   ];
 
@@ -75,16 +131,25 @@ export default function DashboardCustomer() {
     <div className="dx">
       {/* 1 : Welcome */}
       <section className="dx-welcome">
-        <img className="dx-welcome-ava" src={fotoDika} alt="Foto profil" />
+        {profile?.avatar_url ? (
+          <img
+            className="dx-welcome-ava"
+            src={profile.avatar_url}
+            alt="Foto profil"
+            style={{ border: "3px solid rgba(255,255,255,0.25)", boxShadow: "0 0 15px rgba(22,199,132,0.2)" }}
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
+        ) : (
+          <InitialAvatar name={profile?.full_name} size={72} />
+        )}
         <div className="dx-welcome-body">
-          <h1 className="dx-welcome-hi">Halo, {firstName} <span>👋</span></h1>
-          <p className="dx-welcome-sub">Selamat datang kembali</p>
+          <h1 className="dx-welcome-hi">{getGreeting()}, {firstName} <span>👋</span></h1>
+          <p className="dx-welcome-sub">Kesehatan hewan peliharaan Anda adalah prioritas utama kami.</p>
           {vaccine && (
             <div className="dx-welcome-notif">
               <FaBell />
               <span>
-                {vaccine.petName} memiliki jadwal vaksin pada{" "}
-                <b>{fullDate(vaccine.dueDate)}</b>.
+                {vaccine.petName} belum memiliki vaksinasi lengkap (Status: <b>{vaccine.status}</b>).
               </span>
             </div>
           )}
@@ -98,8 +163,8 @@ export default function DashboardCustomer() {
         </button>
       </section>
 
-      {/* 3 : Quick Actions */}
-      <section className="dx-quick dx-quick-4">
+      {/* 2 : Quick Actions (Compact SaaS Style) */}
+      <section className="dx-quick" style={{ marginTop: 6, marginBottom: 6 }}>
         {QUICK.map((q) => (
           <button key={q.label} className="dx-quick-btn" onClick={() => navigate(q.to)}>
             <span className={`dx-quick-ic ${q.cls}`}>{q.icon}</span>
@@ -113,15 +178,20 @@ export default function DashboardCustomer() {
 
       {/* 4 : Ringkasan Akun */}
       <section className="dx-stats">
-        {stats.map((s) => (
-          <div key={s.label} className="dx-stat">
-            <span className={`dx-stat-ic ${s.cls}`}>{s.icon}</span>
-            <div>
-              <div className="dx-stat-val">{s.value}</div>
-              <div className="dx-stat-label">{s.label}</div>
+        {stats.map((s) => {
+          // Format dua digit (mis. 01, 02)
+          const formattedVal = typeof s.value === "number" ? String(s.value).padStart(2, "0") : s.value;
+          return (
+            <div key={s.label} className="dx-stat">
+              <span className={`dx-stat-ic ${s.cls}`}>{s.icon}</span>
+              <div>
+                <div className="dx-stat-val">{formattedVal}</div>
+                <div className="dx-stat-label">{s.label}</div>
+                <div style={{ fontSize: 10.5, color: "#94a3b8", fontWeight: 600, marginTop: 2 }}>Aktif • Baru</div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
       <div className="dx-grid">
@@ -137,19 +207,39 @@ export default function DashboardCustomer() {
               <div className="dx-pets">
                 {pets.slice(0, 3).map((p) => {
                   const h = HEALTH[p.healthStatus] ?? HEALTH.healthy;
+                  const healthPct = h.label === "Sehat" ? "95%" : h.label === "Kontrol Lanjutan" ? "70%" : "40%";
+                  const healthColor = h.label === "Sehat" ? "#10b981" : h.label === "Kontrol Lanjutan" ? "#f59e0b" : "#ef4444";
+                  
                   return (
                     <div key={p.id} className="dx-pet">
                       <PetThumb pet={p} />
+                      {/* Status melayang absolute diatur lewat CSS */}
+                      <span className={`dx-pet-status ${h.cls}`}>{h.label}</span>
+                      
                       <div className="dx-pet-body">
                         <div className="dx-pet-name">{p.name}</div>
-                        <div className="dx-pet-breed">{p.breed}</div>
+                        <div className="dx-pet-breed">{p.species} • {p.breed}</div>
+                        
                         <div className="dx-pet-meta">
-                          <span>Usia: {p.ageText}</span>
-                          <span className={`dx-pet-status ${h.cls}`}>{h.label}</span>
+                          <span><b>Usia:</b> {p.ageText}</span>
+                          <span><b>Kelamin:</b> {p.gender || "Jantan"}</span>
+                          <span><b>Pemilik:</b> {firstName} (Anda)</span>
                         </div>
+
+                        {/* Health Progress Bar */}
+                        <div className="health-progress-bar" style={{ marginTop: 10, marginBottom: 14 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 4 }}>
+                            <span>Kondisi Fisik</span>
+                            <span style={{ color: healthColor }}>{healthPct}</span>
+                          </div>
+                          <div className="loyalty-progress-track" style={{ height: 6, margin: 0 }}>
+                            <div className="loyalty-progress-fill" style={{ width: healthPct, background: healthColor }} />
+                          </div>
+                        </div>
+
                         <button className="dx-pet-btn"
                           onClick={() => navigate(`/customer/hewan/${p.id}`)}>
-                          Detail
+                          Lihat Detail
                         </button>
                       </div>
                     </div>
@@ -197,6 +287,14 @@ export default function DashboardCustomer() {
                 <span className="dx-vaccine-date"><FaRegClock /> {fullDate(vaccine.dueDate)}</span>
                 <span className="dx-vaccine-left">{daysUntil(vaccine.dueDate)} Hari Lagi</span>
               </div>
+              <button 
+                type="button" 
+                className="dx-pet-btn" 
+                style={{ marginTop: 4, width: "100%", background: "#fff", color: "#e11d48", borderColor: "#fecdd3" }}
+                onClick={() => navigate("/customer/daftar-hewan")}
+              >
+                Lihat Detail Hewan
+              </button>
             </section>
           )}
 
@@ -217,6 +315,17 @@ export default function DashboardCustomer() {
           </section>
         </div>
       </div>
+
+      {/* 8 : Premium SaaS Footer */}
+      <footer className="cust-shell-footer">
+        <div>© {new Date().getFullYear()} VetCare CRM. Version 1.0.0</div>
+        <div className="cust-shell-footer-links">
+          <a href="#support" onClick={(e) => { e.preventDefault(); alert("Customer Support Hub: support@vetcare.com"); }}>Support</a>
+          <a href="#privacy" onClick={(e) => { e.preventDefault(); alert("Kebijakan Privasi VetCare"); }}>Privacy Policy</a>
+          <a href="#terms" onClick={(e) => { e.preventDefault(); alert("Syarat & Ketentuan Layanan"); }}>Terms</a>
+        </div>
+        <div>Made with <span style={{ color: "#ef4444" }}>❤</span> for Pets</div>
+      </footer>
     </div>
   );
 }

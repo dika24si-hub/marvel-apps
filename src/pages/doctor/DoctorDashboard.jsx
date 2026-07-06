@@ -8,11 +8,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaCalendarDay, FaHourglassHalf, FaCheckCircle, FaPaw,
-  FaNotesMedical, FaClock, FaArrowRight,
+  FaNotesMedical, FaClock, FaArrowRight, FaStar,
 } from "react-icons/fa";
 import { PageHeader, StatCard, Card, Badge, EmptyState } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
 import { getDoctorStats } from "../../lib/services";
+import { supabase } from "../../lib/supabase";
 import "./doctor.css";
 
 const STATUS_META = {
@@ -32,13 +33,29 @@ export default function DoctorDashboard() {
   const { profile } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [rating, setRating] = useState(0);
 
   useEffect(() => {
-    getDoctorStats()
+    if (profile?.id) {
+      supabase
+        .from("doctors")
+        .select("rating_avg")
+        .eq("id", profile.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setRating(Number(data.rating_avg || 0));
+        })
+        .catch((e) => console.error("Gagal memuat rating dokter:", e.message));
+    }
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    getDoctorStats(profile.id)
       .then(setStats)
       .catch((e) => console.error("Gagal memuat dashboard dokter:", e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [profile?.id]);
 
   const firstName = (profile?.full_name || "Dokter").replace(/^drh\.?\s*/i, "").split(" ")[0];
 
@@ -67,11 +84,12 @@ export default function DoctorDashboard() {
         <p style={{ color: "#94a3b8", fontSize: 13 }}>Memuat data...</p>
       ) : (
         <>
-          <div className="mini-stats" style={{ marginTop: 14 }}>
+          <div className="mini-stats" style={{ marginTop: 14, gridTemplateColumns: "repeat(5, 1fr)" }}>
             <StatCard icon={<FaCalendarDay />}   color="primary" label="Jadwal Hari Ini" value={stats.todayCount} />
             <StatCard icon={<FaHourglassHalf />} color="warning" label="Menunggu Konfirmasi" value={stats.pending} />
             <StatCard icon={<FaPaw />}           color="info"    label="Total Pasien" value={stats.uniquePatients} />
             <StatCard icon={<FaNotesMedical />}  color="success" label="Rekam Medis" value={stats.totalRecords} />
+            <StatCard icon={<FaStar style={{ color: "#f5b301" }} />} color="warning" label="Rating Anda" value={rating ? `${rating.toFixed(1)} / 5.0` : "-"} />
           </div>
 
           <div className="doc-dash-grid">

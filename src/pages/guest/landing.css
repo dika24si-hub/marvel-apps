@@ -896,6 +896,12 @@
   border: 1px solid var(--vc-border);
   border-radius: 16px;
   padding: 28px;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.vc-testi:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  border-color: var(--vc-primary);
 }
 .vc-testi-stars { color: #f59e0b; margin-bottom: 14px; display: flex; gap: 3px; }
 .vc-testi p {
@@ -1532,3 +1538,20 @@
 .vc-dark .vc-chat-box,
 .vc-dark .vc-promo { background: #1e293b; border-color: #334155; }
 .vc-dark .vc-chat-bubble.bot { background: #334155; }
+
+/* ---------- DOCTORS GRID ---------- */
+.vc-doctors-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 28px;
+  margin-top: 40px;
+}
+.vc-doctor-card {
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+  border-radius: 20px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+}
+

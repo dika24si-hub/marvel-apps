@@ -37,15 +37,30 @@ const normalizeAppRole = (role) => {
 const ensureProfileRow = async ({ id, email, fullName = "", phone = "", role = "customer" }) => {
   if (!id) return;
   try {
+    // Cek dulu apakah profile sudah ada
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id, avatar_url")
+      .eq("id", id)
+      .maybeSingle();
+
+    const payload = {
+      id,
+      email,
+      full_name: fullName,
+      phone,
+      role,
+      is_active: true,
+    };
+
+    // Hanya set avatar_url: null jika ini profile baru (belum ada di database)
+    // sehingga tidak menghapus foto yang sudah diupload user yang ada
+    if (!existing) {
+      payload.avatar_url = null;
+    }
+
     const { error } = await supabase.from("profiles").upsert(
-      {
-        id,
-        email,
-        full_name: fullName,
-        phone,
-        role,
-        is_active: true,
-      },
+      payload,
       { onConflict: "id" }
     );
 

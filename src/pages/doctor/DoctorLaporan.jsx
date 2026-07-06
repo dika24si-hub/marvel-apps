@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { FaCalendarCheck, FaNotesMedical, FaCheckCircle, FaChartLine } from "react-icons/fa";
 import { PageHeader, StatCard, Card, EmptyState } from "../../components/ui";
+import { useAuth } from "../../context/AuthContext";
 import { getDoctorReport } from "../../lib/services";
 import "./doctor.css";
 
@@ -21,15 +22,17 @@ const STATUS_LABEL = {
 };
 
 export default function DoctorLaporan() {
+  const { profile } = useAuth();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getDoctorReport()
+    if (!profile?.id) return;
+    getDoctorReport(profile.id)
       .then(setReport)
       .catch((e) => console.error("Gagal memuat laporan:", e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [profile?.id]);
 
   if (loading) {
     return (

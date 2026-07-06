@@ -15,6 +15,7 @@ import {
 } from "../../components/ui";
 import { Dialog } from "../../components/shadcn";
 import { usePageSearch } from "../../context/SearchContext";
+import { useAuth } from "../../context/AuthContext";
 import { getAllMedicalRecords } from "../../lib/services";
 import "./doctor.css";
 
@@ -24,17 +25,19 @@ const fmtDate = (iso) =>
 
 export default function DoctorRekamMedis() {
   const { matches } = usePageSearch("Cari diagnosis atau tindakan...");
+  const { profile } = useAuth();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState(null);
 
   useEffect(() => {
-    getAllMedicalRecords()
+    if (!profile?.id) return;
+    getAllMedicalRecords(profile.id)
       .then(setRecords)
       .catch((e) => console.error("Gagal memuat rekam medis:", e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [profile?.id]);
 
   const filtered = useMemo(
     () => records.filter((r) => matches(r.diagnosis, r.actions_taken, r.physical_exam_notes)),

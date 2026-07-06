@@ -10,7 +10,6 @@ import {
 import PetPhoto from "../../components/customer/PetPhoto";
 import { useCustomerData } from "../../context/CustomerDataContext";
 import { useAuth } from "../../context/AuthContext";
-import { dummyMembership } from "../../data/dummyCustomer";
 import { getMedicalRecordsByAnimal } from "../../lib/services";
 import "./pet-detail.css";
 
@@ -168,9 +167,17 @@ export default function PetDetail() {
             <div className="pdx-block">
               <h3>Keanggotaan Aktif</h3>
               <div className="pdx-row">
-                <span className="pdx-row-code">HG-74558</span>
+                <span className="pdx-row-code">HG-{String(profile?.id || "").substring(0, 5).toUpperCase()}</span>
                 <span className="pdx-row-main">Premium Care - Tahunan</span>
-                <span className="pdx-row-right">Aktif s/d {dummyMembership.activeUntil}</span>
+                <span className="pdx-row-right">
+                  Aktif s/d {
+                    (() => {
+                      const base = profile?.created_at ? new Date(profile.created_at) : new Date();
+                      base.setFullYear(base.getFullYear() + 1);
+                      return base.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+                    })()
+                  }
+                </span>
               </div>
             </div>
 

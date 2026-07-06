@@ -154,6 +154,12 @@ export default function Sidebar() {
         path: "/doctor/profil",
         tip: "Profil dokter",
       },
+      {
+        name: "Ulasan Saya",
+        icon: <FaStar />,
+        path: "/doctor/ulasan",
+        tip: "Ulasan & rating dari pasien",
+      },
     ];
   } else {
     // Admin melihat menu lengkap (tanpa jadwal — dipindah ke dokter).

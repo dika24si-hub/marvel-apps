@@ -21,6 +21,7 @@ import {
   sendConsultationMessage,
   getDoctors,
 } from "../../lib/services";
+import { supabase } from "../../lib/supabase";
 import "./customer.css";
 
 const fmtTime = (iso) =>
@@ -62,6 +63,62 @@ export default function CustomerKonsultasi() {
     }
   }, [user?.id]);
 
+  // Efek real-time untuk daftar konsultasi
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel("customer-consultations-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "consultations", filter: `member_id=eq.${user.id}` },
+        () => {
+          loadList();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, loadList]);
+
+  // Efek real-time untuk pesan di dalam thread aktif
+  useEffect(() => {
+    if (!active?.id) return;
+
+    // Listener untuk pesan baru
+    const msgChannel = supabase
+      .channel(`customer-chat-msgs-${active.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "consultation_messages", filter: `consultation_id=eq.${active.id}` },
+        (payload) => {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+        }
+      )
+      .subscribe();
+
+    // Listener untuk perubahan status thread (misal ditutup oleh dokter)
+    const statusChannel = supabase
+      .channel(`customer-chat-status-${active.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "consultations", filter: `id=eq.${active.id}` },
+        (payload) => {
+          setActive(payload.new);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(msgChannel);
+      supabase.removeChannel(statusChannel);
+    };
+  }, [active?.id]);
+
   useEffect(() => {
     loadList();
   }, [loadList]);
@@ -89,7 +146,10 @@ export default function CustomerKonsultasi() {
         senderId: user.id,
         message: text,
       });
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
     } catch (err) {
       console.error(err.message);
     } finally {

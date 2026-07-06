@@ -120,14 +120,12 @@ export async function submitLead(lead) {
     message: lead.message?.trim() || null,
   };
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("leads")
-    .insert(payload)
-    .select()
-    .single();
+    .insert(payload);
 
   if (error) throw error;
-  return data;
+  return true;
 }
 
 // =====================================================================
@@ -426,14 +424,73 @@ export async function getMedicalRecordsByAnimal(animalId) {
   return data || [];
 }
 
-/** Ambil semua rekam medis (untuk dokter/admin). */
-export async function getAllMedicalRecords() {
-  const { data, error } = await supabase
+/** Ambil semua rekam medis (untuk dokter/admin) menggunakan data stitching JS agar aman dari error RLS/relasi. */
+export async function getAllMedicalRecords(doctorId) {
+  let query = supabase
     .from("medical_records")
     .select("*, prescriptions(*)")
     .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data || [];
+
+  // Filter berdasarkan dokter yang sedang login
+  if (doctorId) {
+    query = query.eq("doctor_id", doctorId);
+  }
+
+  const { data: records, error: recErr } = await query;
+
+  if (recErr) throw recErr;
+  const list = records || [];
+  if (list.length === 0) return [];
+
+  // Ambil semua unique animal_id dan doctor_id
+  const animalIds = [...new Set(list.map((r) => r.animal_id).filter(Boolean))];
+  const doctorIds = [...new Set(list.map((r) => r.doctor_id).filter(Boolean))];
+
+  let animalMap = {};
+  let profileMap = {};
+
+  // Fetch data hewan & owner
+  if (animalIds.length) {
+    const { data: animals, error: animErr } = await supabase
+      .from("animals")
+      .select("id, name, species, breed, owner_id")
+      .in("id", animalIds);
+    
+    if (!animErr && animals) {
+      animalMap = Object.fromEntries(animals.map((a) => [a.id, a]));
+      
+      const ownerIds = [...new Set(animals.map((a) => a.owner_id).filter(Boolean))];
+      // Gabungkan doctorIds dan ownerIds untuk fetch profiles sekaligus
+      const allProfileIds = [...new Set([...doctorIds, ...ownerIds])];
+      
+      if (allProfileIds.length) {
+        const { data: profiles, error: profErr } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", allProfileIds);
+        
+        if (!profErr && profiles) {
+          profileMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
+        }
+      }
+    }
+  }
+
+  // Jahit datanya kembali
+  return list.map((r) => {
+    const animal = animalMap[r.animal_id] || null;
+    const owner = animal ? profileMap[animal.owner_id] : null;
+    const doctor = profileMap[r.doctor_id] || null;
+
+    return {
+      ...r,
+      animal: animal ? {
+        ...animal,
+        owner: owner || { id: animal.owner_id, full_name: "Member", email: "" }
+      } : null,
+      doctor: doctor || { id: r.doctor_id, full_name: "Dokter", email: "" }
+    };
+  });
 }
 
 // =====================================================================
@@ -945,10 +1002,13 @@ export async function payInvoice(invoiceId, method = "QRIS") {
 // =====================================================================
 
 /** KPI ringkas dashboard dokter (PRD 8.1). */
-export async function getDoctorStats() {
+/** Ringkasan statistik untuk dashboard dokter (PRD 8.1). */
+export async function getDoctorStats(doctorId) {
+  if (!doctorId) return { todayCount: 0, pending: 0, confirmed: 0, completed: 0, totalAppointments: 0, uniquePatients: 0, totalRecords: 0, appointments: [] };
+
   const [apptR, recR] = await Promise.all([
-    supabase.from("appointments").select("id, status, scheduled_at, animal_id"),
-    supabase.from("medical_records").select("id, created_at"),
+    supabase.from("appointments").select("id, status, scheduled_at, animal_id, pet_name, complaint").eq("doctor_id", doctorId),
+    supabase.from("medical_records").select("id, created_at").eq("doctor_id", doctorId),
   ]);
   if (apptR.error) throw apptR.error;
   const appts = apptR.data || [];
@@ -980,11 +1040,25 @@ export async function getDoctorStats() {
   };
 }
 
-/** Daftar pasien (hewan) + pemilik untuk dokter (PRD 8.3). */
-export async function getAllPatients() {
+/** Daftar pasien (hewan) yang pernah ditangani dokter ini. */
+export async function getAllPatients(doctorId) {
+  if (!doctorId) return [];
+
+  // Ambil semua appointment dokter ini untuk mendapatkan animal_id yang relevan
+  const { data: docAppts, error: apptErr } = await supabase
+    .from("appointments")
+    .select("animal_id, scheduled_at, created_at")
+    .eq("doctor_id", doctorId)
+    .order("scheduled_at", { ascending: false });
+  if (apptErr) throw apptErr;
+
+  const animalIds = [...new Set((docAppts || []).map((a) => a.animal_id).filter(Boolean))];
+  if (animalIds.length === 0) return [];
+
   const { data: animals, error } = await supabase
     .from("animals")
     .select("*")
+    .in("id", animalIds)
     .order("created_at", { ascending: false });
   if (error) throw error;
 
@@ -1001,18 +1075,11 @@ export async function getAllPatients() {
     ownerMap = Object.fromEntries((owners || []).map((o) => [o.id, o]));
   }
 
-  // Jumlah dan kunjungan terakhir per hewan.
-  const { data: appts } = await supabase
-    .from("appointments")
-    .select("animal_id, scheduled_at, created_at")
-    .order("scheduled_at", { ascending: false });
-
-  const visitInfo = (appts || []).reduce((acc, a) => {
+  // Hitung kunjungan per hewan berdasarkan appointment dokter ini
+  const visitInfo = (docAppts || []).reduce((acc, a) => {
     if (!a.animal_id) return acc;
-
     const current = acc[a.animal_id] || { count: 0, lastVisit: null };
     const visitDate = a.scheduled_at || a.created_at || null;
-
     acc[a.animal_id] = {
       count: current.count + 1,
       lastVisit:
@@ -1020,38 +1087,37 @@ export async function getAllPatients() {
           ? visitDate
           : current.lastVisit,
     };
-
     return acc;
   }, {});
 
   return list.map((a) => {
     const owner = ownerMap[a.owner_id] || null;
-
     return {
       ...a,
       gender: a.gender ?? null,
       foto: a.foto ?? null,
       owner: owner
         ? { ...owner, full_name: displayMemberName(owner) }
-        : {
-            id: a.owner_id,
-            full_name: "-",
-            email: "-",
-            phone: "-",
-            created_at: null,
-          },
+        : { id: a.owner_id, full_name: "-", email: "-", phone: "-", created_at: null },
       visitCount: visitInfo[a.id]?.count || 0,
       lastVisit: visitInfo[a.id]?.lastVisit || null,
     };
   });
 }
 
-/** Semua konsultasi (untuk inbox dokter, PRD 8.5). */
-export async function getAllConsultations() {
-  const { data, error } = await supabase
+/** Semua konsultasi untuk inbox dokter ini (PRD 8.5). */
+export async function getAllConsultations(doctorId) {
+  let query = supabase
     .from("consultations")
     .select("*")
     .order("created_at", { ascending: false });
+
+  // Jika doctorId diberikan, filter hanya konsultasi yang ditujukan ke dokter ini
+  if (doctorId) {
+    query = query.eq("doctor_id", doctorId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
 
   const list = data || [];
@@ -1081,10 +1147,13 @@ export async function setConsultationStatus(id, status) {
 }
 
 /** Laporan & statistik dokter (PRD 8.6). */
-export async function getDoctorReport() {
+/** Laporan & statistik dokter (PRD 8.6) — hanya data milik dokter ini. */
+export async function getDoctorReport(doctorId) {
+  if (!doctorId) return { monthly: [], byStatus: {}, topDiagnoses: [], totalAppointments: 0, totalRecords: 0 };
+
   const [apptR, recR] = await Promise.all([
-    supabase.from("appointments").select("status, scheduled_at, complaint, created_at"),
-    supabase.from("medical_records").select("created_at, diagnosis"),
+    supabase.from("appointments").select("status, scheduled_at, complaint, created_at").eq("doctor_id", doctorId),
+    supabase.from("medical_records").select("created_at, diagnosis").eq("doctor_id", doctorId),
   ]);
   if (apptR.error) throw apptR.error;
   const appts = apptR.data || [];
@@ -1666,6 +1735,26 @@ export async function submitReview({ memberId, doctorId, appointmentId = null, r
     is_approved: true,
   });
   if (error) throw error;
+
+  // Recalculate average rating for this doctor and update doctors table
+  try {
+    const { data: revs, error: revErr } = await supabase
+      .from("reviews")
+      .select("rating")
+      .eq("doctor_id", doctorId);
+    
+    if (!revErr && revs) {
+      const totalRating = revs.reduce((sum, r) => sum + (r.rating || 0), 0);
+      const avgRating = revs.length ? Number((totalRating / revs.length).toFixed(2)) : 0;
+
+      await supabase
+        .from("doctors")
+        .update({ rating_avg: avgRating })
+        .eq("id", doctorId);
+    }
+  } catch (e) {
+    console.error("Gagal memperbarui rating_avg dokter:", e.message);
+  }
 
   // Alert admin untuk review negatif (<=2) lewat notifikasi (PRD 10.5).
   try {

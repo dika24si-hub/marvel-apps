@@ -1,10 +1,9 @@
-// src/pages/customer/CustomerJadwal.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaCalendarCheck, FaCalendarPlus, FaCheckCircle } from "react-icons/fa";
 
 import { PageHeader, Card, EmptyState, Button, Input } from "../../components/ui";
 import { useCustomerData } from "../../context/CustomerDataContext";
-import { dummyDoctors } from "../../data/dummyCustomer";
+import { getDoctors } from "../../lib/services";
 import "./customer.css";
 
 const fmt = (iso) =>
@@ -12,7 +11,7 @@ const fmt = (iso) =>
     weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
   });
 
-const EMPTY = { petId: "", date: "", time: "", doctorName: dummyDoctors[0], reason: "" };
+const EMPTY = { petId: "", date: "", time: "", doctorName: "", reason: "" };
 
 export default function CustomerJadwal() {
   const { pets, appointments, addAppointment, cancelAppointment } = useCustomerData();
@@ -21,6 +20,19 @@ export default function CustomerJadwal() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [doctors, setDoctors] = useState([]);
+
+  useEffect(() => {
+    getDoctors()
+      .then((data) => {
+        setDoctors(data);
+        if (data.length > 0) {
+          const defaultDoc = data[0].profile?.full_name || "Dokter";
+          setForm((p) => ({ ...p, doctorName: defaultDoc }));
+        }
+      })
+      .catch((err) => console.error("Gagal memuat dokter:", err.message));
+  }, []);
 
   const change = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -33,6 +45,7 @@ export default function CustomerJadwal() {
     setError("");
     if (!form.petId) return setError("Pilih hewan yang akan diperiksa.");
     if (!form.date || !form.time) return setError("Tanggal & jam wajib diisi.");
+    if (!form.doctorName) return setError("Dokter wajib dipilih.");
 
     const pet = pets.find((p) => p.id === form.petId);
     setSaving(true);
@@ -47,7 +60,11 @@ export default function CustomerJadwal() {
     if (!appt) return setError("Gagal membuat booking. Coba lagi.");
 
     setSuccess(`Booking untuk ${pet.name} berhasil dibuat.`);
-    setForm(EMPTY);
+    // Reset form dengan mempertahankan default doctor
+    setForm({
+      ...EMPTY,
+      doctorName: doctors[0]?.profile?.full_name || "Dokter"
+    });
     setTimeout(() => setSuccess(""), 4000);
   };
 
@@ -91,7 +108,14 @@ export default function CustomerJadwal() {
                 <label className="ui-label">Dokter</label>
                 <select className="dh-select" value={form.doctorName}
                   onChange={(e) => change("doctorName", e.target.value)}>
-                  {dummyDoctors.map((d) => <option key={d} value={d}>{d}</option>)}
+                  {doctors.length === 0 ? (
+                    <option value="">Memuat dokter...</option>
+                  ) : (
+                    doctors.map((d) => {
+                      const name = d.profile?.full_name || "Dokter";
+                      return <option key={d.id} value={name}>{name} ({d.specialization})</option>;
+                    })
+                  )}
                 </select>
               </div>
 

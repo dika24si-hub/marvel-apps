@@ -121,43 +121,74 @@ export default function CustomerKeanggotaan() {
 
       {/* Kartu poin + progres tier */}
       <div className="loy-top">
-        <div className="loy-card" style={{ "--tier": tier.color }}>
-          <div className="loy-card-tier">
-            <FaCrown /> {tier.label} Member
+        
+        {/* Holographic Credit Card Design */}
+        <div className={`membership-digital-card ${tier.key}`}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.85 }}>
+              VetCare Loyalty Card
+            </span>
+            <span style={{ fontSize: 20, color: tier.key === "platinum" ? "#ec4899" : "#f5b301" }}>
+              <FaCrown />
+            </span>
           </div>
-          <div className="loy-card-points">
-            <FaCoins />
-            <span>{loyalty.total.toLocaleString("id-ID")}</span>
-            <em>poin</em>
+
+          <div className="membership-chip" />
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: "1px" }}>
+              {loyalty.total.toLocaleString("id-ID")}
+              <span style={{ fontSize: 13, fontWeight: 500, marginLeft: 6, opacity: 0.9 }}>Points</span>
+            </span>
+            <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.7)", marginTop: 2 }}>
+              Masa Aktif: Setahun sejak registrasi
+            </span>
           </div>
-          <div className="loy-card-disc">
-            Diskon layanan{" "}
-            <b>{tier.discount}%</b>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end" }}>
+            <div>
+              <span style={{ fontSize: 9.5, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", display: "block" }}>
+                Cardholder Tier
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.5px" }}>
+                {tier.label} Member
+              </span>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: 9.5, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", display: "block" }}>
+                Benefit
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>
+                {tier.discount}% Diskon
+              </span>
+            </div>
           </div>
         </div>
 
         <div className="loy-progress">
-          <div className="loy-progress-head">
+          <div className="loy-progress-head" style={{ display: "flex", alignItems: "center", gap: 8, color: "#10b981", fontWeight: 700, marginBottom: 8 }}>
             <FaArrowUp />
             <span>{next ? `Menuju ${next.label}` : "Kamu di tier tertinggi 🎉"}</span>
           </div>
           {next ? (
             <>
-              <p className="loy-progress-text">
+              <p className="loy-progress-text" style={{ fontSize: 13, color: "#475569", margin: "0 0 12px" }}>
                 Kurang <b>{pointsToNext.toLocaleString("id-ID")}</b> poin lagi untuk
                 naik ke {next.label}.
               </p>
-              <div className="loy-bar">
-                <div className="loy-bar-fill" style={{ width: `${progressPct}%` }} />
+              
+              <div className="loyalty-progress-track">
+                <div className="loyalty-progress-fill" style={{ width: `${progressPct}%` }} />
               </div>
-              <div className="loy-bar-scale">
-                <span>{tier.min.toLocaleString("id-ID")}</span>
-                <span>{next.min.toLocaleString("id-ID")}</span>
+              
+              <div className="loy-bar-scale" style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
+                <span>{tier.min.toLocaleString("id-ID")} pts</span>
+                <span>{next.min.toLocaleString("id-ID")} pts</span>
               </div>
             </>
           ) : (
-            <p className="loy-progress-text">
-              Nikmati semua keuntungan member tertinggi VetCare.
+            <p className="loy-progress-text" style={{ fontSize: 13, color: "#475569", margin: 0 }}>
+              Nikmati semua keuntungan member tertinggi VetCare. Diskon 10% di setiap pemeriksaan hewan.
             </p>
           )}
         </div>

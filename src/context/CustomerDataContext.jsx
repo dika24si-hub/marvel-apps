@@ -15,6 +15,25 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 import { createNotification } from "../lib/services";
 
+// ---- Upload foto hewan ke Supabase Storage ----
+// Bucket: pet-photos (buat di Supabase Dashboard > Storage > New Bucket)
+// Policy: bucket harus "Public" agar URL bisa diakses tanpa auth.
+async function uploadPetPhoto(file, ownerId) {
+  if (!file) return null;
+  // Nama unik: {ownerId}/{timestamp}-{namafile}
+  const ext = file.name.split(".").pop();
+  const path = `${ownerId}/${Date.now()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from("pet-photos")
+    .upload(path, file, { upsert: false, cacheControl: "3600" });
+
+  if (error) throw new Error(`Gagal upload foto: ${error.message}`);
+
+  const { data } = supabase.storage.from("pet-photos").getPublicUrl(path);
+  return data?.publicUrl ?? null;
+}
+
 const CustomerDataContext = createContext(null);
 
 export const useCustomerData = () => {
@@ -125,18 +144,59 @@ export function CustomerDataProvider({ children }) {
     refresh();
   }, [refresh]);
 
+  // Real-time synchronization untuk data booking & hewan
+  useEffect(() => {
+    if (!ownerId) return;
+
+    // Mendengarkan perubahan pada tabel appointments milik customer ini
+    const apptChannel = supabase
+      .channel("customer-appointments-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointments", filter: `member_id=eq.${ownerId}` },
+        () => {
+          refresh();
+        }
+      )
+      .subscribe();
+
+    // Mendengarkan perubahan pada tabel animals milik customer ini
+    const animalsChannel = supabase
+      .channel("customer-animals-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "animals", filter: `owner_id=eq.${ownerId}` },
+        () => {
+          refresh();
+        }
+      )
+      .subscribe();
+
+    const handleFocus = () => refresh();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(apptChannel);
+      supabase.removeChannel(animalsChannel);
+    };
+  }, [ownerId, refresh]);
+
   // ---------- PETS ----------
-  const addPet = async (data) => {
+  const addPet = async (data, photoFile = null) => {
     if (!ownerId) return null;
     const gender = data.gender?.trim();
-    const foto = data.photo?.trim();
 
     if (!gender) {
       throw new Error("Kelamin hewan wajib dipilih.");
     }
-    if (!foto) {
-      throw new Error("URL foto hewan wajib diisi.");
+    if (!photoFile) {
+      throw new Error("Foto hewan wajib diunggah.");
     }
+
+    // Upload foto terlebih dahulu ke Supabase Storage
+    const uploadedUrl = await uploadPetPhoto(photoFile, ownerId);
+    const photoUrl = uploadedUrl ?? "";
 
     const payload = {
       owner_id: ownerId,
@@ -149,7 +209,7 @@ export function CustomerDataProvider({ children }) {
       color: data.color || null,
       microchip: data.microchip || null,
       main_vet: data.mainVet || null,
-      foto,
+      photo_url: photoUrl,
       vaccine_status: data.vaccineStatus || "belum",
       health_status: data.healthStatus || "healthy",
       notes: data.complaint?.trim() || null,
@@ -160,32 +220,22 @@ export function CustomerDataProvider({ children }) {
       .select()
       .single();
 
-    if (error && isMissingColumnError(error, "foto")) {
-      const retry = await supabase
-        .from("animals")
-        .insert(withPhotoUrlColumn(payload))
-        .select()
-        .single();
-      row = retry.data;
-      error = retry.error;
-    }
-
     if (error) {
       console.error("Gagal tambah hewan:", error.message);
       throw error;
     }
 
-    if (row?.id && (row.gender !== gender || row.foto !== foto)) {
+    if (row?.id && (row.gender !== gender || row.photo_url !== photoUrl)) {
       const { data: syncedRow, error: syncError } = await supabase
         .from("animals")
-        .update({ gender, foto })
+        .update({ gender, photo_url: photoUrl })
         .eq("id", row.id)
         .eq("owner_id", ownerId)
         .select()
         .single();
 
       if (syncError) {
-        console.error("Gagal sinkron gender/foto hewan:", syncError.message);
+        console.error("Gagal sinkron gender/photo_url hewan:", syncError.message);
         throw syncError;
       }
 

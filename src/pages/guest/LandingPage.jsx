@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   FaPaw, FaBars, FaTimes, FaNotesMedical, FaCalendarCheck, FaCreditCard,
-  FaUsers, FaCheck, FaPlus, FaStar, FaFacebookF, FaInstagram, FaLinkedinIn,
+  FaUsers, FaCheck, FaPlus, FaStar, FaRegStar, FaFacebookF, FaInstagram, FaLinkedinIn,
   FaArrowRight, FaHeartbeat, FaShieldAlt, FaClinicMedical, FaStore, FaHospital,
   FaChartLine, FaReact, FaMoon, FaSun, FaUserTie, FaUserNurse, FaUserMd,
   FaBell, FaRobot, FaBrain, FaMagic, FaLightbulb, FaEnvelope, FaPhoneAlt,
@@ -12,6 +12,7 @@ import { SiSupabase, SiPostgresql } from "react-icons/si";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, Tooltip, CartesianGrid,
 } from "recharts";
+import { supabase } from "../../lib/supabase";
 import { submitLead, submitContact } from "../../lib/services";
 import useReveal from "./useReveal";
 import "./landing.css";
@@ -22,6 +23,7 @@ import "./landing.css";
 
 const NAV_LINKS = [
   { label: "Layanan", to: "#features" },
+  { label: "Tim Dokter", to: "#doctors" },
   { label: "Cara Kerja", to: "#workflow" },
   { label: "Keanggotaan", to: "#pricing" },
   { label: "FAQ", to: "#faq" },
@@ -111,6 +113,32 @@ const serviceData = [
   { s: "Grooming", v: 26 }, { s: "Lab", v: 14 },
 ];
 
+function StarRating({ value = 0, size = 12 }) {
+  return (
+    <div style={{ display: "inline-flex", gap: 3 }}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span
+          key={star}
+          style={{
+            color: value >= star ? "#f5b301" : "#e2e8f0",
+            fontSize: size,
+            lineHeight: 1,
+            display: "inline-block"
+          }}
+        >
+          {value >= star ? <FaStar /> : <FaRegStar />}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const MOCK_DOCTORS = [
+  { id: "mock-1", name: "drh. Dika Sinambela", specialization: "bedah", rating_avg: 4.9 },
+  { id: "mock-2", name: "drh. Sarah Amelia", specialization: "umum", rating_avg: 4.8 },
+  { id: "mock-3", name: "drh. Budi Sentosa", specialization: "grooming", rating_avg: 4.7 }
+];
+
 export default function LandingPage() {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
@@ -118,6 +146,42 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState(0);
 
   useReveal();
+
+  const [doctorsList, setDoctorsList] = useState(MOCK_DOCTORS);
+  const [docsLoading, setDocsLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("doctors")
+      .select("id, specialization, rating_avg")
+      .eq("is_active", true)
+      .limit(3)
+      .then(async ({ data: docs, error }) => {
+        if (error || !docs || docs.length === 0) {
+          setDocsLoading(false);
+          return;
+        }
+        const ids = docs.map((d) => d.id);
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", ids);
+        
+        const nameMap = Object.fromEntries((profs || []).map((p) => [p.id, p.full_name]));
+        
+        const loadedDocs = docs.map((d) => ({
+          ...d,
+          name: nameMap[d.id] || "Dokter Hewan",
+        }));
+        
+        setDoctorsList(loadedDocs);
+        setDocsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error loading doctors:", err);
+        setDocsLoading(false);
+      });
+  }, []);
 
   // Newsletter
   const [news, setNews] = useState("");
@@ -362,6 +426,47 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ============ FEATURED DOCTORS ============ */}
+      <section id="doctors" className="vc-section">
+        <div className="vc-container">
+          <div className="vc-section-head vc-reveal">
+            <span className="vc-eyebrow">Tim Ahli Kami</span>
+            <h2>Dokter Hewan Berpengalaman</h2>
+            <p>Konsultasikan kesehatan hewan kesayangan Anda dengan tim dokter profesional kami secara real-time.</p>
+          </div>
+          {docsLoading ? (
+            <p style={{ textAlign: "center", color: "#64748b" }}>Memuat tim dokter...</p>
+          ) : (
+            <div className="vc-doctors-grid">
+              {doctorsList.map((doc, idx) => {
+                const specLabel = doc.specialization === "bedah" ? "Spesialis Bedah" : doc.specialization === "grooming" ? "Spesialis Grooming" : "Spesialis Hewan Kecil";
+                return (
+                  <article key={doc.id} className="vc-feature vc-doctor-card">
+                    <div style={{
+                      width: "80px", height: "80px", borderRadius: "50%",
+                      background: "linear-gradient(135deg, #14b8a6, #0ea5e9)",
+                      color: "#fff", display: "grid", placeItems: "center",
+                      margin: "0 auto 16px auto", fontSize: "24px", fontWeight: "700"
+                    }}>
+                      {doc.name.replace("Dr. ", "").replace("drh. ", "").charAt(0)}
+                    </div>
+                    <h3 style={{ fontSize: "18px", color: "var(--vc-secondary, #1c2421)", margin: "0 0 6px 0", fontWeight: "700" }}>{doc.name}</h3>
+                    <p style={{ fontSize: "13.5px", color: "var(--vc-muted, #64748b)", margin: "0 0 16px 0" }}>{specLabel}</p>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", marginBottom: "22px" }}>
+                      <StarRating value={Math.round(doc.rating_avg || 5)} size={13} />
+                      <span style={{ fontSize: "13px", fontWeight: "700", color: "#475569" }}>({Number(doc.rating_avg || 5.0).toFixed(1)})</span>
+                    </div>
+                    <a className="vc-btn vc-btn-outline vc-btn-sm" style={{ width: "100%", justifyContent: "center" }} href="https://wa.me/6281261971655" target="_blank" rel="noreferrer">
+                      <FaWhatsapp style={{ marginRight: "6px" }} /> Tanya Dokter
+                    </a>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* ============ WORKFLOW ============ */}
       <section id="workflow" className="vc-section alt">
         <div className="vc-container">
@@ -511,7 +616,15 @@ export default function LandingPage() {
             {FAQS.map((item, i) => (
               <div key={i} className={`vc-faq-item ${openFaq === i ? "open" : ""}`}>
                 <button className="vc-faq-q" onClick={() => setOpenFaq(openFaq === i ? -1 : i)}>
-                  {item.q}<FaPlus />
+                  {item.q}
+                  <span style={{
+                    transform: openFaq === i ? "rotate(45deg)" : "none",
+                    transition: "transform 0.25s ease",
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}>
+                    <FaPlus />
+                  </span>
                 </button>
                 <div className="vc-faq-a">{item.a}</div>
               </div>
@@ -711,15 +824,22 @@ export default function LandingPage() {
               <a className="vc-btn vc-btn-primary vc-btn-sm" href="#estimasi" onClick={() => setChatOpen(false)}>
                 <FaComments /> Konsultasi Gratis
               </a>
-              <a className="vc-chat-wa" href="https://wa.me/622112345678" target="_blank" rel="noreferrer">
+              <a className="vc-chat-wa" href="https://wa.me/6281261971655" target="_blank" rel="noreferrer">
                 <FaWhatsapp /> Chat WhatsApp
               </a>
             </div>
           </div>
         )}
-        <button className={`vc-chat-fab ${chatOpen ? "open" : ""}`} onClick={() => setChatOpen((o) => !o)} aria-label="Buka live chat">
-          {chatOpen ? <FaTimes /> : <FaComments />}
-        </button>
+        <a
+          className="vc-chat-fab"
+          href="https://wa.me/6281261971655"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Chat WhatsApp"
+          style={{ background: "linear-gradient(135deg, #25D366, #128C7E)", boxShadow: "0 10px 26px rgba(37, 211, 102, 0.45)" }}
+        >
+          <FaWhatsapp />
+        </a>
       </div>
 
       {/* ============ PROMO MODAL (muncul setelah 5 detik) ============ */}

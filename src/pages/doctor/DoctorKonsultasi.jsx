@@ -17,6 +17,7 @@ import {
   sendConsultationMessage,
   setConsultationStatus,
 } from "../../lib/services";
+import { supabase } from "../../lib/supabase";
 import "./doctor.css";
 
 const fmtTime = (iso) =>
@@ -34,16 +35,72 @@ export default function DoctorKonsultasi() {
   const [sending, setSending] = useState(false);
 
   const load = useCallback(async () => {
+    if (!user?.id) return;
     setLoading(true);
     try {
-      const data = await getAllConsultations();
+      const data = await getAllConsultations(user.id);
       setList(data);
     } catch (e) {
       console.error("Gagal memuat konsultasi:", e.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
+
+  // Efek real-time untuk inbox daftar konsultasi
+  useEffect(() => {
+    const channel = supabase
+      .channel("doctor-consultations-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "consultations" },
+        () => {
+          load();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [load]);
+
+  // Efek real-time untuk pesan di dalam thread aktif
+  useEffect(() => {
+    if (!active?.id) return;
+
+    // Listener untuk pesan baru
+    const msgChannel = supabase
+      .channel(`doctor-chat-msgs-${active.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "consultation_messages", filter: `consultation_id=eq.${active.id}` },
+        (payload) => {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+        }
+      )
+      .subscribe();
+
+    // Listener untuk perubahan status thread (misal jika status berubah)
+    const statusChannel = supabase
+      .channel(`doctor-chat-status-${active.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "consultations", filter: `id=eq.${active.id}` },
+        (payload) => {
+          setActive(payload.new);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(msgChannel);
+      supabase.removeChannel(statusChannel);
+    };
+  }, [active?.id]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -69,7 +126,10 @@ export default function DoctorKonsultasi() {
         senderId: user?.id || null,
         message: text,
       });
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
     } catch (e) {
       console.error(e.message);
     } finally {

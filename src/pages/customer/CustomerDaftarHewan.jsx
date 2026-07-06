@@ -1,8 +1,9 @@
 // src/pages/customer/CustomerDaftarHewan.jsx
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaPaw, FaDog, FaCheckCircle, FaPlusCircle, FaTrash, FaChevronRight,
+  FaCamera, FaTimes,
 } from "react-icons/fa";
 
 import { PageHeader, Card, Input, Button } from "../../components/ui";
@@ -26,26 +27,121 @@ const EMPTY = {
   gender: "", color: "", photo: "", vaccineStatus: "belum", healthStatus: "healthy", complaint: "",
 };
 
+// Komponen upload foto hewan dengan drag-and-drop dan preview
+function PetPhotoUploader({ file, previewUrl, onChange, onRemove }) {
+  const inputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped && dropped.type.startsWith("image/")) onChange(dropped);
+  };
+
+  const handleFile = (e) => {
+    const picked = e.target.files?.[0];
+    if (picked) onChange(picked);
+    // reset input agar file yang sama bisa dipilih ulang
+    e.target.value = "";
+  };
+
+  if (previewUrl) {
+    return (
+      <div className="dh-photo-preview-wrap">
+        <img src={previewUrl} alt="Preview foto hewan" className="dh-photo-preview" />
+        <button
+          type="button"
+          className="dh-photo-remove"
+          onClick={onRemove}
+          title="Hapus foto"
+        >
+          <FaTimes />
+        </button>
+        <button
+          type="button"
+          className="dh-photo-change-btn"
+          onClick={() => inputRef.current?.click()}
+        >
+          <FaCamera /> Ganti Foto
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={handleFile}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`dh-photo-drop ${dragging ? "dragging" : ""}`}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+      onClick={() => inputRef.current?.click()}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+    >
+      <FaCamera className="dh-photo-drop-icon" />
+      <span className="dh-photo-drop-text">Klik atau seret foto ke sini</span>
+      <span className="dh-photo-drop-hint">JPG, PNG, WEBP • Maks. 5 MB</span>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handleFile}
+      />
+    </div>
+  );
+}
+
 export default function CustomerDaftarHewan() {
   const navigate = useNavigate();
   const { pets, addPet, removePet, loading } = useCustomerData();
 
   const [form, setForm] = useState(EMPTY);
+  const [photoFile, setPhotoFile] = useState(null);    // File object
+  const [photoPreview, setPhotoPreview] = useState(""); // blob URL untuk preview
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const change = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
+  const handlePhotoChange = (file) => {
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const handlePhotoRemove = () => {
+    setPhotoFile(null);
+    setPhotoPreview("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!photoFile) {
+      setError("Foto hewan wajib diunggah.");
+      return;
+    }
+    if (photoFile.size > 5 * 1024 * 1024) {
+      setError("Ukuran foto maksimal 5 MB.");
+      return;
+    }
     setSaving(true);
     setSuccess("");
     setError("");
     try {
-      const pet = await addPet(form);
+      const pet = await addPet(form, photoFile);
       setSuccess(`"${pet.name}" berhasil ditambahkan.`);
       setForm(EMPTY);
+      handlePhotoRemove();
       setTimeout(() => setSuccess(""), 4000);
     } catch (err) {
       setError(err.message || "Gagal menyimpan hewan ke database.");
@@ -146,8 +242,15 @@ export default function CustomerDaftarHewan() {
               </div>
             </div>
 
-            <Input label="URL Foto" placeholder="https://..."
-              value={form.photo} onChange={(e) => change("photo", e.target.value)} required />
+            <div className="ui-field">
+              <label className="ui-label">Foto Hewan</label>
+              <PetPhotoUploader
+                file={photoFile}
+                previewUrl={photoPreview}
+                onChange={handlePhotoChange}
+                onRemove={handlePhotoRemove}
+              />
+            </div>
 
             <div className="ui-field">
               <label className="ui-label">Catatan / Keluhan (opsional)</label>

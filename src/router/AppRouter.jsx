@@ -36,6 +36,7 @@ const DoctorRekamMedis = lazy(() => import("../pages/doctor/DoctorRekamMedis"));
 const DoctorKonsultasi = lazy(() => import("../pages/doctor/DoctorKonsultasi"));
 const DoctorLaporan = lazy(() => import("../pages/doctor/DoctorLaporan"));
 const DoctorProfil = lazy(() => import("../pages/doctor/DoctorProfil"));
+const DoctorUlasan = lazy(() => import("../pages/doctor/DoctorUlasan"));
 
 // ======================
 // PAGES — CUSTOMER
@@ -120,6 +121,7 @@ export default function AppRouter() {
           <Route path="/doctor/konsultasi" element={<DoctorKonsultasi />} />
           <Route path="/doctor/laporan" element={<DoctorLaporan />} />
           <Route path="/doctor/profil" element={<DoctorProfil />} />
+          <Route path="/doctor/ulasan" element={<DoctorUlasan />} />
         </Route>
 
         {/* ============================= */}
