@@ -39,6 +39,7 @@ import {
   TabsContent,
 } from "../components/shadcn";
 import { getAdminStats } from "../lib/services";
+import { supabase } from "../lib/supabase";
 
 const STATUS_LABEL = {
   PENDING: { label: "Menunggu", pill: "pending" },
@@ -55,10 +56,29 @@ export default function Dashboard() {
   const { t } = useLang();
   const [stats, setStats] = useState(null);
 
-  useEffect(() => {
+  const loadStats = () => {
     getAdminStats()
       .then(setStats)
       .catch((err) => console.error("Gagal memuat statistik:", err.message));
+  };
+
+  useEffect(() => {
+    loadStats();
+
+    const channel = supabase
+      .channel("admin-dashboard-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => loadStats())
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => loadStats())
+      .on("postgres_changes", { event: "*", schema: "public", table: "invoices" }, () => loadStats())
+      .subscribe();
+
+    const handleFocus = () => loadStats();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Grouping appointments ke 7 hari terakhir secara dinamis

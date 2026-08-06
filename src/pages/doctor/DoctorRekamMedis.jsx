@@ -17,6 +17,7 @@ import { Dialog } from "../../components/shadcn";
 import { usePageSearch } from "../../context/SearchContext";
 import { useAuth } from "../../context/AuthContext";
 import { getAllMedicalRecords } from "../../lib/services";
+import { supabase } from "../../lib/supabase";
 import "./doctor.css";
 
 const PER_PAGE = 8;
@@ -31,12 +32,30 @@ export default function DoctorRekamMedis() {
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState(null);
 
-  useEffect(() => {
+  const loadRecords = () => {
     if (!profile?.id) return;
     getAllMedicalRecords(profile.id)
       .then(setRecords)
       .catch((e) => console.error("Gagal memuat rekam medis:", e.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    loadRecords();
+
+    const channel = supabase
+      .channel(`doctor-records-${profile.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "medical_records", filter: `doctor_id=eq.${profile.id}` }, () => loadRecords())
+      .subscribe();
+
+    const handleFocus = () => loadRecords();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, [profile?.id]);
 
   const filtered = useMemo(

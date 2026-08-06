@@ -5,6 +5,7 @@ import {
 
 import { usePageSearch } from "../context/SearchContext";
 import { getMembers, setMemberActive } from "../lib/services";
+import { supabase } from "../lib/supabase";
 
 import {
   PageHeader, StatCard, Card, Table, Badge, Avatar, EmptyState, Pagination, Button,
@@ -38,7 +39,23 @@ export default function Member() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+
+    const channel = supabase
+      .channel("admin-members-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "animals" }, () => load())
+      .subscribe();
+
+    const handleFocus = () => load();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const toggleActive = async (m) => {
     const next = !m.is_active;
@@ -59,7 +76,6 @@ export default function Member() {
         (filter === "Nonaktif" && !m.is_active);
       return matchKey && matchFilter;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matches, filter, members]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));

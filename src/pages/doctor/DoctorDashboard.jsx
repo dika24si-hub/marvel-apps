@@ -49,12 +49,31 @@ export default function DoctorDashboard() {
     }
   }, [profile?.id]);
 
-  useEffect(() => {
+  const loadDoctorStats = () => {
     if (!profile?.id) return;
     getDoctorStats(profile.id)
       .then(setStats)
       .catch((e) => console.error("Gagal memuat dashboard dokter:", e.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    loadDoctorStats();
+
+    const channel = supabase
+      .channel(`doctor-dashboard-${profile.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `doctor_id=eq.${profile.id}` }, () => loadDoctorStats())
+      .on("postgres_changes", { event: "*", schema: "public", table: "medical_records", filter: `doctor_id=eq.${profile.id}` }, () => loadDoctorStats())
+      .subscribe();
+
+    const handleFocus = () => loadDoctorStats();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, [profile?.id]);
 
   const firstName = (profile?.full_name || "Dokter").replace(/^drh\.?\s*/i, "").split(" ")[0];

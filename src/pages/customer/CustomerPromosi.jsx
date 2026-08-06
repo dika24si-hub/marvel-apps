@@ -14,6 +14,7 @@ import {
 
 import { useLang } from "../../i18n/LanguageContext";
 import { getActivePromotions } from "../../lib/services";
+import { supabase } from "../../lib/supabase";
 import { PageHeader, Card, Button, Tag, EmptyState } from "../../components/ui";
 
 // Mapping nama icon (dari kolom DB) → komponen react-icon
@@ -88,22 +89,37 @@ export default function CustomerPromosi() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const load = async () => {
+    try {
+      setLoading(true);
+      const data = await getActivePromotions();
+      // Bila server belum punya data promo, pakai daftar default.
+      setPromos(data && data.length ? data : FALLBACK_PROMOS);
+    } catch (err) {
+      // Jika gagal memuat dari server, tetap tampilkan promo default.
+      setPromos(FALLBACK_PROMOS);
+      setError(err.message || "Gagal memuat promosi");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const data = await getActivePromotions();
-        // Bila server belum punya data promo, pakai daftar default.
-        setPromos(data && data.length ? data : FALLBACK_PROMOS);
-      } catch (err) {
-        // Jika gagal memuat dari server, tetap tampilkan promo default.
-        setPromos(FALLBACK_PROMOS);
-        setError(err.message || "Gagal memuat promosi");
-      } finally {
-        setLoading(false);
-      }
-    };
     load();
+
+    const channel = supabase
+      .channel("customer-promotions-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "promotions" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vouchers" }, () => load())
+      .subscribe();
+
+    const handleFocus = () => load();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (

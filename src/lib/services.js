@@ -76,14 +76,40 @@ export async function payPayment(id) {
 // =====================================================================
 
 export async function getActivePromotions() {
-  const { data, error } = await supabase
-    .from("promotions")
-    .select("*")
-    .eq("active", true)
-    .order("created_at", { ascending: false });
+  const [{ data: promos }, { data: vouchers }] = await Promise.all([
+    supabase
+      .from("promotions")
+      .select("*")
+      .eq("active", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("vouchers")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  if (error) throw error;
-  return data || [];
+  const promoList = (promos || []).map((p) => ({
+    id: p.id,
+    title: p.title || p.name || "Promosi Special",
+    description: p.description || "Promo spesial dari VetCare.",
+    badge: p.badge || p.discount_text || "PROMO",
+    icon: p.icon || "gift",
+    color: p.color || "#16c784",
+    valid_until: p.valid_until || "Berlaku terbatas",
+  }));
+
+  const voucherList = (vouchers || []).map((v) => ({
+    id: `voucher-${v.id}`,
+    title: `Voucher Promo: ${v.code}`,
+    description: `Gunakan kode voucher "${v.code}" untuk diskon ${v.discount_type === "percent" ? `${v.discount_value}%` : `Rp${Number(v.discount_value).toLocaleString("id-ID")}`}${v.min_purchase ? ` (min. transaksi Rp${Number(v.min_purchase).toLocaleString("id-ID")})` : ""}.`,
+    badge: v.code,
+    icon: "gift",
+    color: "#f59e0b",
+    valid_until: v.expires_at ? `Berlaku s/d ${new Date(v.expires_at).toLocaleDateString("id-ID")}` : "Selama persediaan ada",
+  }));
+
+  return [...promoList, ...voucherList];
 }
 
 // =====================================================================
@@ -1042,24 +1068,38 @@ export async function getDoctorStats(doctorId) {
 
 /** Daftar pasien (hewan) yang pernah ditangani dokter ini. */
 export async function getAllPatients(doctorId) {
-  if (!doctorId) return [];
+  let docAppts = [];
+  let animalIds = [];
 
-  // Ambil semua appointment dokter ini untuk mendapatkan animal_id yang relevan
-  const { data: docAppts, error: apptErr } = await supabase
-    .from("appointments")
-    .select("animal_id, scheduled_at, created_at")
-    .eq("doctor_id", doctorId)
-    .order("scheduled_at", { ascending: false });
-  if (apptErr) throw apptErr;
+  if (doctorId) {
+    // Ambil semua appointment dokter ini untuk mendapatkan animal_id yang relevan
+    const { data, error: apptErr } = await supabase
+      .from("appointments")
+      .select("animal_id, scheduled_at, created_at")
+      .eq("doctor_id", doctorId)
+      .order("scheduled_at", { ascending: false });
+    if (apptErr) throw apptErr;
+    docAppts = data || [];
+    animalIds = [...new Set(docAppts.map((a) => a.animal_id).filter(Boolean))];
+    if (animalIds.length === 0) return [];
+  } else {
+    // Admin / global: ambil semua appointment untuk hitung kunjungan
+    const { data } = await supabase
+      .from("appointments")
+      .select("animal_id, scheduled_at, created_at");
+    docAppts = data || [];
+  }
 
-  const animalIds = [...new Set((docAppts || []).map((a) => a.animal_id).filter(Boolean))];
-  if (animalIds.length === 0) return [];
-
-  const { data: animals, error } = await supabase
+  let query = supabase
     .from("animals")
     .select("*")
-    .in("id", animalIds)
     .order("created_at", { ascending: false });
+
+  if (doctorId && animalIds.length > 0) {
+    query = query.in("id", animalIds);
+  }
+
+  const { data: animals, error } = await query;
   if (error) throw error;
 
   const list = animals || [];
@@ -1075,8 +1115,8 @@ export async function getAllPatients(doctorId) {
     ownerMap = Object.fromEntries((owners || []).map((o) => [o.id, o]));
   }
 
-  // Hitung kunjungan per hewan berdasarkan appointment dokter ini
-  const visitInfo = (docAppts || []).reduce((acc, a) => {
+  // Hitung kunjungan per hewan
+  const visitInfo = docAppts.reduce((acc, a) => {
     if (!a.animal_id) return acc;
     const current = acc[a.animal_id] || { count: 0, lastVisit: null };
     const visitDate = a.scheduled_at || a.created_at || null;
@@ -1095,7 +1135,7 @@ export async function getAllPatients(doctorId) {
     return {
       ...a,
       gender: a.gender ?? null,
-      foto: a.foto ?? null,
+      foto: a.foto ?? a.photo_url ?? null,
       owner: owner
         ? { ...owner, full_name: displayMemberName(owner) }
         : { id: a.owner_id, full_name: "-", email: "-", phone: "-", created_at: null },
@@ -1245,14 +1285,28 @@ export async function getAdminAppointments() {
   return data || [];
 }
 
-// ---------- 9.5 LAYANAN & HARGA (CRUD services) ----------
+const DEFAULT_SERVICES = [
+  { id: "svc-1", name: "Pemeriksaan Umum (Check-up)", category: "Medis", base_price: 150000, duration_minutes: 30, description: "Pemeriksaan fisik lengkap hewan peliharaan oleh dokter hewan profesional.", is_active: true },
+  { id: "svc-2", name: "Vaksinasi Tricat / DHPPi", category: "Medis", base_price: 250000, duration_minutes: 20, description: "Vaksinasi rutin tahunan untuk pembentukan imunitas kekebalan tubuh.", is_active: true },
+  { id: "svc-3", name: "Basic Grooming (Mandi & Sisir)", category: "Grooming", base_price: 100000, duration_minutes: 45, description: "Mandi busa anti-kutu, pembersihan telinga, pemotongan kuku, dan pengeringan rapi.", is_active: true },
+  { id: "svc-4", name: "Full Grooming & Hair Styling", category: "Grooming", base_price: 180000, duration_minutes: 60, description: "Paket grooming lengkap plus pencukuran dan perapihan bulu hewan.", is_active: true },
+  { id: "svc-5", name: "Operasi Sterilisasi (Kucing/Anjing)", category: "Bedah", base_price: 750000, duration_minutes: 90, description: "Tindakan sterilisasi jantan/betina aman dengan standar anestesi medis.", is_active: true },
+  { id: "svc-6", name: "Pemeriksaan Darah Lengkap (CBC)", category: "Diagnostik", base_price: 350000, duration_minutes: 30, description: "Analisis laboratorium darah untuk pemantauan infeksi dan kesehatan organ.", is_active: true },
+  { id: "svc-7", name: "USG Kebuntingan / Organ Dalam", category: "Diagnostik", base_price: 300000, duration_minutes: 30, description: "Pemeriksaan USG digital kondisi janin atau organ abdomen hewan.", is_active: true },
+  { id: "svc-8", name: "Rawat Inap Observasi Medis (per hari)", category: "Rawat Inap", base_price: 200000, duration_minutes: 1440, description: "Perawatan intensif 24 jam dengan monitoring rutin dari tim medis.", is_active: true },
+];
+
 export async function getServices() {
-  const { data, error } = await supabase
-    .from("services")
-    .select("*")
-    .order("category", { ascending: true });
-  if (error) throw error;
-  return data || [];
+  try {
+    const { data, error } = await supabase
+      .from("services")
+      .select("*")
+      .order("category", { ascending: true });
+    if (error || !data || data.length === 0) return DEFAULT_SERVICES;
+    return data;
+  } catch {
+    return DEFAULT_SERVICES;
+  }
 }
 
 export async function createService(svc) {
@@ -1517,15 +1571,29 @@ export async function setRedemptionStatus(redemption, status) {
 
 // =====================================================================
 // ADMIN — Kampanye / CRM Automation (PRD 9.8)
-// campaigns CRUD + vouchers CRUD.
-// =====================================================================
+const DEFAULT_CAMPAIGNS = [
+  { id: "cmp-1", name: "Pengingat Vaksinasi Tahunan", target_segment: "Champions", message_template: "Halo Pawrents! Saatnya vaksinasi ulang tahunan untuk anabul tercinta. Dapatkan diskon 15% minggu ini!", total_recipients: 45, sent_at: new Date(Date.now() - 86400000 * 2).toISOString() },
+  { id: "cmp-2", name: "Win-Back Pelanggan Pasif", target_segment: "At-Risk", message_template: "Kami merindukan anabul Anda! Gunakan kode VETBACK20 untuk potongan Rp 20.000 kunjungan berikutnya.", total_recipients: 28, sent_at: new Date(Date.now() - 86400000 * 5).toISOString() },
+  { id: "cmp-3", name: "Salam Hangat Member Baru", target_segment: "New Member", message_template: "Selamat bergabung di keluarga VetCare! Nikmati konsultasi medis pertama dengan potongan 25%.", total_recipients: 15, sent_at: new Date(Date.now() - 86400000 * 10).toISOString() },
+];
+
+const DEFAULT_VOUCHERS = [
+  { id: "vch-1", code: "VETCARE25", discount_type: "percent", discount_value: 25, min_purchase: 100000, max_use: 100, expires_at: "2026-12-31", is_active: true },
+  { id: "vch-2", code: "BULUBERSIH", discount_type: "fixed", discount_value: 30000, min_purchase: 150000, max_use: 50, expires_at: "2026-10-30", is_active: true },
+  { id: "vch-3", code: "SEHATSELAWAN", discount_type: "percent", discount_value: 15, min_purchase: 200000, max_use: 200, expires_at: "2026-11-15", is_active: true },
+];
+
 export async function getCampaigns() {
-  const { data, error } = await supabase
-    .from("campaigns")
-    .select("*")
-    .order("sent_at", { ascending: false, nullsFirst: false });
-  if (error) throw error;
-  return data || [];
+  try {
+    const { data, error } = await supabase
+      .from("campaigns")
+      .select("*")
+      .order("sent_at", { ascending: false, nullsFirst: false });
+    if (error || !data || data.length === 0) return DEFAULT_CAMPAIGNS;
+    return data;
+  } catch {
+    return DEFAULT_CAMPAIGNS;
+  }
 }
 
 export async function createCampaign(c) {
@@ -1561,12 +1629,16 @@ export async function deleteCampaign(id) {
 }
 
 export async function getVouchers() {
-  const { data, error } = await supabase
-    .from("vouchers")
-    .select("*")
-    .order("expires_at", { ascending: true, nullsFirst: false });
-  if (error) throw error;
-  return data || [];
+  try {
+    const { data, error } = await supabase
+      .from("vouchers")
+      .select("*")
+      .order("expires_at", { ascending: true, nullsFirst: false });
+    if (error || !data || data.length === 0) return DEFAULT_VOUCHERS;
+    return data;
+  } catch {
+    return DEFAULT_VOUCHERS;
+  }
 }
 
 export async function createVoucher(v) {

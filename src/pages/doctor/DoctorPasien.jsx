@@ -15,6 +15,7 @@ import { Dialog } from "../../components/shadcn";
 import { usePageSearch } from "../../context/SearchContext";
 import { useAuth } from "../../context/AuthContext";
 import { getAllPatients, getMedicalRecordsByAnimal } from "../../lib/services";
+import { supabase } from "../../lib/supabase";
 import "./doctor.css";
 
 const PER_PAGE = 8;
@@ -32,12 +33,31 @@ export default function DoctorPasien() {
   const [records, setRecords] = useState([]);
   const [recLoading, setRecLoading] = useState(false);
 
-  useEffect(() => {
+  const loadPatients = () => {
     if (!profile?.id) return;
     getAllPatients(profile.id)
       .then(setPatients)
       .catch((e) => console.error("Gagal memuat pasien:", e.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    loadPatients();
+
+    const channel = supabase
+      .channel(`doctor-patients-${profile.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => loadPatients())
+      .on("postgres_changes", { event: "*", schema: "public", table: "animals" }, () => loadPatients())
+      .subscribe();
+
+    const handleFocus = () => loadPatients();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, [profile?.id]);
 
   const filtered = useMemo(

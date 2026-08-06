@@ -15,6 +15,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/shadcn";
 import { usePageSearch } from "../context/SearchContext";
 import { getAdminAppointments, updateAppointmentStatus } from "../lib/services";
+import { supabase } from "../lib/supabase";
 
 const STATUS_META = {
   PENDING:   { label: "Menunggu",    variant: "warning" },
@@ -47,7 +48,23 @@ export default function Appointment() {
       setLoading(false);
     }
   };
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+
+    const channel = supabase
+      .channel("admin-appointments-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => load())
+      .subscribe();
+
+    const handleFocus = () => load();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const act = async (id, status) => {
     setBusyId(id);

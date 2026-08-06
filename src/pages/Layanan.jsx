@@ -14,6 +14,7 @@ import {
 import { Dialog } from "../components/shadcn";
 import { usePageSearch } from "../context/SearchContext";
 import { getServices, createService, updateService, deleteService } from "../lib/services";
+import { supabase } from "../lib/supabase";
 import "./doctor/doctor.css";
 
 const rupiah = (n) =>
@@ -42,7 +43,23 @@ export default function Layanan() {
       setLoading(false);
     }
   };
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+
+    const channel = supabase
+      .channel("admin-services-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "services" }, () => load())
+      .subscribe();
+
+    const handleFocus = () => load();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const openNew = () => { setForm(EMPTY); setEdit({}); setMsg(""); };
   const openEdit = (s) => {

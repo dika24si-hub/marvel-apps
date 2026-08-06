@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent, Dialog } from "../components/
 import {
   getAllAppointments, updateAppointmentStatus, createMedicalRecord,
 } from "../lib/services";
+import { supabase } from "../lib/supabase";
 
 // Map status DB -> label & varian badge
 const STATUS_META = {
@@ -69,6 +70,19 @@ export default function Jadwal() {
 
   useEffect(() => {
     load();
+
+    const channel = supabase
+      .channel("admin-jadwal-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => load())
+      .subscribe();
+
+    const handleFocus = () => load();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const act = async (id, status) => {

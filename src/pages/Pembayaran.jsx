@@ -12,6 +12,7 @@ import { useLang } from "../i18n/LanguageContext";
 import { formatDate, formatCurrency } from "../i18n/format";
 import { usePageSearch } from "../context/SearchContext";
 import { getAllInvoices } from "../lib/services";
+import { supabase } from "../lib/supabase";
 
 import {
   PageHeader,
@@ -108,6 +109,19 @@ export default function Pembayaran() {
 
   useEffect(() => {
     loadInvoices();
+
+    const channel = supabase
+      .channel("admin-invoices-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "invoices" }, () => loadInvoices())
+      .subscribe();
+
+    const handleFocus = () => loadInvoices();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filtered = useMemo(() => {

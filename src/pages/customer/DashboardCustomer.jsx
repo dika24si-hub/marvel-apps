@@ -13,6 +13,7 @@ import {
   dummyPayments, dummyVaccineReminders,
 } from "../../data/dummyCustomer";
 import { getLoyalty, LOYALTY_TIERS, runMemberTriggers, getInvoicesByOwner } from "../../lib/services";
+import { supabase } from "../../lib/supabase";
 import "./customer.css";
 
 // Komponen avatar inisial — ditampilkan ketika belum ada foto profil
@@ -79,7 +80,7 @@ export default function DashboardCustomer() {
   const [loyalty, setLoyalty] = useState({ total: 0, tier: LOYALTY_TIERS[0] });
   const [invoices, setInvoices] = useState([]);
 
-  useEffect(() => {
+  const loadUserData = () => {
     if (!user?.id) return;
     getLoyalty(user.id)
       .then(setLoyalty)
@@ -88,9 +89,28 @@ export default function DashboardCustomer() {
     getInvoicesByOwner(user.id)
       .then(setInvoices)
       .catch((e) => console.error("Gagal memuat invoice:", e.message));
+  };
+
+  useEffect(() => {
+    if (!user?.id) return;
+    loadUserData();
 
     // Jalankan trigger CRM otomatis (PRD 10.4): reminder kontrol & win-back.
     runMemberTriggers(user.id);
+
+    const channel = supabase
+      .channel(`cust-dash-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "invoices", filter: `member_id=eq.${user.id}` }, () => loadUserData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "loyalty_points", filter: `member_id=eq.${user.id}` }, () => loadUserData())
+      .subscribe();
+
+    const handleFocus = () => loadUserData();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   const tierMedal = { silver: "🥈", gold: "🥇", platinum: "💎" };

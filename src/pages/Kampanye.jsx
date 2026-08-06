@@ -16,6 +16,7 @@ import {
   getCampaigns, createCampaign, sendCampaign, deleteCampaign,
   getVouchers, createVoucher, deleteVoucher,
 } from "../lib/services";
+import { supabase } from "../lib/supabase";
 import "./doctor/doctor.css";
 
 const SEGMENTS = ["Semua Member", "Champions", "Loyal Customers", "At-Risk", "New Member", "Prospect"];
@@ -51,7 +52,24 @@ export default function Kampanye() {
       setLoading(false);
     }
   }, []);
-  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    load();
+
+    const channel = supabase
+      .channel("admin-kampanye-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "campaigns" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vouchers" }, () => load())
+      .subscribe();
+
+    const handleFocus = () => load();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(channel);
+    };
+  }, [load]);
 
   const saveCampaign = async (e) => {
     e.preventDefault();
